@@ -9,6 +9,7 @@ final class DisplayModel: ObservableObject {
     @Published private(set) var currentLooksW: Int = 0   // 0 means native
     @Published private(set) var currentHz: Double = 0
     @Published private(set) var refreshRates: [Double] = []
+    @Published private(set) var rotation: Int = 0        // 0/90/180/270 degrees
     @Published var brightness: Double = 100              // software dimming, 0...100
     @Published var warmth: Double = 0                    // color temperature, 0...100
     @Published var hardwareDDC: Bool = false             // also drive DDC when set
@@ -17,11 +18,13 @@ final class DisplayModel: ObservableObject {
     var hardwareAvailable: Bool { Brightness.hardwareAvailable }
 
     let displayID: CGDirectDisplayID
+    let canRotate: Bool
     private let nativeMode: CGDisplayMode?
 
     init(displayID: CGDirectDisplayID = CGMainDisplayID()) {
         self.displayID = displayID
         self.nativeMode = CGDisplayCopyDisplayMode(displayID)
+        self.canRotate = Rotation.canRotate(displayID)
         refresh()
         let saved = UserDefaults.standard.integer(forKey: Self.key(displayID))
         if saved > 0 { apply(looksW: saved) }
@@ -70,6 +73,7 @@ final class DisplayModel: ObservableObject {
     }
 
     private func detectCurrent() {
+        rotation = Rotation.current(displayID)
         guard let cur = CGDisplayCopyDisplayMode(displayID) else {
             currentLooksW = 0; currentHz = 0; refreshRates = []; return
         }
@@ -93,5 +97,11 @@ final class DisplayModel: ObservableObject {
     func setRefresh(_ hz: Double) {
         guard currentLooksW > 0 else { return }
         if SkyLight.applyHiDPI(looksW: currentLooksW, hz: hz, to: displayID) { detectCurrent() }
+    }
+
+    func rotate(to degrees: Int) {
+        guard Rotation.rotate(displayID, to: degrees) else { return }
+        // Orientation change is async and reshapes the mode list; resettle shortly after.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { self.refresh() }
     }
 }

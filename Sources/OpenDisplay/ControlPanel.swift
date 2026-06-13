@@ -94,6 +94,19 @@ private struct ResolutionDetail: View {
                         .labelsHidden()
                         .padding(.horizontal, 12)
                     }
+                    if model.canRotate {
+                        HStack { Text("Rotation").font(.caption).foregroundStyle(.secondary); Spacer() }
+                            .padding(.top, 12).padding(.horizontal, 12)
+                        Picker("", selection: Binding(get: { model.rotation },
+                                                      set: { model.rotate(to: $0) })) {
+                            ForEach(Rotation.degrees, id: \.self) { d in
+                                Text(d == 0 ? "Standard" : "\(d)°").tag(d)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                        .labelsHidden()
+                        .padding(.horizontal, 12)
+                    }
                 }
             }
             .padding(20)

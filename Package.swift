@@ -5,6 +5,7 @@ let package = Package(
     name: "OpenDisplay",
     platforms: [.macOS(.v14)],
     targets: [
-        .executableTarget(name: "OpenDisplay", path: "Sources/OpenDisplay")
+        .target(name: "MPBridge", path: "Sources/MPBridge"),
+        .executableTarget(name: "OpenDisplay", dependencies: ["MPBridge"], path: "Sources/OpenDisplay")
     ]
 )
