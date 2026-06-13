@@ -69,4 +69,13 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
 </dict></plist>
 PLIST
 
+# Sign the assembled bundle last, after the binary, Info.plist, and App Intents
+# metadata are all in place. The linker only ad-hoc-signs the bare executable, which
+# leaves the bundle's signature invalid once resources are added - and SMAppService
+# (Start at Login) refuses to register an app whose signature doesn't verify. An
+# ad-hoc bundle signature is enough for local login-item registration.
+codesign --force --sign - --identifier com.orellius.opendisplay "$APP" >/dev/null 2>&1 \
+  && echo "ad-hoc signed the bundle" \
+  || echo "note: codesign failed; Start at Login may not register"
+
 echo "built $APP"
