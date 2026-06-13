@@ -14,7 +14,9 @@ final class DisplayModel: ObservableObject {
     @Published private(set) var rotation: Int = 0        // 0/90/180/270 degrees
     @Published var brightness: Double = 100              // software dimming, 0...100
     @Published var warmth: Double = 0                    // color temperature, 0...100
-    @Published var hardwareDDC: Bool = false             // also drive DDC when set
+    @Published var hardwareDDC: Bool = false {           // also drive DDC when set
+        didSet { UserDefaults.standard.set(hardwareDDC, forKey: Self.ddcKey(displayID)) }
+    }
     @Published private(set) var favorites: Set<Int> = [] // starred looks-like widths
     @Published private(set) var virtualActive = false    // headless virtual display on
     @Published private(set) var presets: [TonePreset?] = [nil, nil, nil]
@@ -46,6 +48,7 @@ final class DisplayModel: ObservableObject {
         brightness = (UserDefaults.standard.object(forKey: Self.brightKey(displayID)) as? Double) ?? 100
         warmth = (UserDefaults.standard.object(forKey: Self.warmthKey(displayID)) as? Double) ?? 0
         favorites = Set((UserDefaults.standard.array(forKey: Self.favKey(displayID)) as? [Int]) ?? [])
+        hardwareDDC = UserDefaults.standard.bool(forKey: Self.ddcKey(displayID))
         presets = (0 ..< 3).map { i in
             guard UserDefaults.standard.bool(forKey: "preset.\(i).set") else { return nil }
             return TonePreset(brightness: UserDefaults.standard.double(forKey: "preset.\(i).b"),
@@ -74,6 +77,7 @@ final class DisplayModel: ObservableObject {
     static func brightKey(_ id: CGDirectDisplayID) -> String { "brightness.\(id)" }
     static func warmthKey(_ id: CGDirectDisplayID) -> String { "warmth.\(id)" }
     private static func favKey(_ id: CGDirectDisplayID) -> String { "favorites.\(id)" }
+    private static func ddcKey(_ id: CGDirectDisplayID) -> String { "hardwareDDC.\(id)" }
 
     // BetterDisplay #1976: save the current brightness+warmth to a slot, recall it later.
     func savePreset(_ i: Int) {
@@ -218,11 +222,26 @@ final class DisplayModel: ObservableObject {
     }
 
     func startVirtual(looksW: Int, looksH: Int) {
-        if virtual.start(looksW: looksW, looksH: looksH) { virtualActive = true }
+        guard virtual.start(looksW: looksW, looksH: looksH) else { return }
+        virtualActive = true
+        let d = UserDefaults.standard
+        d.set(true, forKey: "virtual.enabled")
+        d.set(looksW, forKey: "virtual.w")
+        d.set(looksH, forKey: "virtual.h")
     }
 
     func stopVirtual() {
         virtual.stop()
         virtualActive = false
+        UserDefaults.standard.set(false, forKey: "virtual.enabled")
+    }
+
+    // Recreate the headless display on launch if it was left on (e.g. an always-on
+    // box that rebooted). Called after launch so the run loop can register it.
+    func restoreVirtualIfNeeded() {
+        guard UserDefaults.standard.bool(forKey: "virtual.enabled"), !virtualActive else { return }
+        let w = UserDefaults.standard.object(forKey: "virtual.w") as? Int ?? 2560
+        let h = UserDefaults.standard.object(forKey: "virtual.h") as? Int ?? 1440
+        startVirtual(looksW: w, looksH: h)
     }
 }
