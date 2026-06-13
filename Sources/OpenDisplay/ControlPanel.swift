@@ -179,6 +179,28 @@ private struct BrightnessDetail: View {
                             .monospacedDigit().frame(width: 44, alignment: .trailing)
                     }
                 }
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(spacing: 8) {
+                        ForEach(0 ..< 3, id: \.self) { i in
+                            Button { model.applyPreset(i) } label: {
+                                VStack(spacing: 2) {
+                                    Text("Preset \(i + 1)").font(.caption2)
+                                    if let p = model.presets[i] {
+                                        Text("\(Int(p.brightness)) / \(Int(p.warmth))")
+                                            .font(.caption).monospacedDigit()
+                                    } else {
+                                        Text("empty").font(.caption).foregroundStyle(.secondary)
+                                    }
+                                }
+                                .frame(maxWidth: .infinity).padding(.vertical, 8)
+                            }
+                            .buttonStyle(.bordered)
+                            .contextMenu { Button("Save current here") { model.savePreset(i) } }
+                        }
+                    }
+                    Text("Click to apply · right-click to save the current brightness and warmth")
+                        .font(.caption2).foregroundStyle(.secondary)
+                }
                 if model.hardwareAvailable {
                     Card {
                         Toggle(isOn: $model.hardwareDDC) {

@@ -4,6 +4,8 @@
 import Cocoa
 import Combine
 
+struct TonePreset { let brightness: Double; let warmth: Double }
+
 final class DisplayModel: ObservableObject {
     @Published private(set) var modes: [DisplayMode] = []
     @Published private(set) var currentLooksW: Int = 0   // 0 means native
@@ -15,6 +17,7 @@ final class DisplayModel: ObservableObject {
     @Published var hardwareDDC: Bool = false             // also drive DDC when set
     @Published private(set) var favorites: Set<Int> = [] // starred looks-like widths
     @Published private(set) var virtualActive = false    // headless virtual display on
+    @Published private(set) var presets: [TonePreset?] = [nil, nil, nil]
 
     var hardwareAvailable: Bool { Brightness.hardwareAvailable }
 
@@ -36,6 +39,11 @@ final class DisplayModel: ObservableObject {
         brightness = (UserDefaults.standard.object(forKey: Self.brightKey(displayID)) as? Double) ?? 100
         warmth = (UserDefaults.standard.object(forKey: Self.warmthKey(displayID)) as? Double) ?? 0
         favorites = Set((UserDefaults.standard.array(forKey: Self.favKey(displayID)) as? [Int]) ?? [])
+        presets = (0 ..< 3).map { i in
+            guard UserDefaults.standard.bool(forKey: "preset.\(i).set") else { return nil }
+            return TonePreset(brightness: UserDefaults.standard.double(forKey: "preset.\(i).b"),
+                              warmth: UserDefaults.standard.double(forKey: "preset.\(i).w"))
+        }
         applyTone()
         // The schedule, when enabled, drives brightness/warmth live (without touching the
         // manual saved values); when disabled it restores them. Created last so its
@@ -59,6 +67,22 @@ final class DisplayModel: ObservableObject {
     static func brightKey(_ id: CGDirectDisplayID) -> String { "brightness.\(id)" }
     static func warmthKey(_ id: CGDirectDisplayID) -> String { "warmth.\(id)" }
     private static func favKey(_ id: CGDirectDisplayID) -> String { "favorites.\(id)" }
+
+    // BetterDisplay #1976: save the current brightness+warmth to a slot, recall it later.
+    func savePreset(_ i: Int) {
+        guard presets.indices.contains(i) else { return }
+        presets[i] = TonePreset(brightness: brightness, warmth: warmth)
+        UserDefaults.standard.set(true, forKey: "preset.\(i).set")
+        UserDefaults.standard.set(brightness, forKey: "preset.\(i).b")
+        UserDefaults.standard.set(warmth, forKey: "preset.\(i).w")
+    }
+
+    func applyPreset(_ i: Int) {
+        guard presets.indices.contains(i), let p = presets[i] else { return }
+        setBrightness(p.brightness)
+        setWarmth(p.warmth)
+        OSD.brightness(p.brightness)
+    }
 
     func isFavorite(_ looksW: Int) -> Bool { favorites.contains(looksW) }
 
