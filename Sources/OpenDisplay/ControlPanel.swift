@@ -49,7 +49,7 @@ struct ControlPanel: View {
                 case .resolution: ResolutionDetail(model: model)
                 case .brightness: BrightnessDetail(model: model)
                 case .display: DisplayDetail(model: model)
-                case .settings: SettingsDetail(model: model, schedule: model.schedule)
+                case .settings: SettingsDetail(model: model, schedule: model.schedule, idle: model.idle)
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -257,6 +257,7 @@ private struct VirtualRes: Identifiable, Hashable {
 private struct SettingsDetail: View {
     @ObservedObject var model: DisplayModel
     @ObservedObject var schedule: NightSchedule
+    @ObservedObject var idle: IdleDimmer
     @State private var launch = LoginItem.isEnabled
     @State private var virtualW = 2560
     private let virtualPresets = [VirtualRes(w: 1920, h: 1080), VirtualRes(w: 2560, h: 1440),
@@ -319,6 +320,28 @@ private struct SettingsDetail: View {
                                 Image(systemName: "sun.min").foregroundStyle(.secondary)
                                 Slider(value: $schedule.nightBrightness, in: 25 ... 100).tint(.orange)
                                 Text("\(Int(schedule.nightBrightness))%").font(.callout).monospacedDigit()
+                                    .frame(width: 40, alignment: .trailing)
+                            }
+                        }
+                    }
+                }
+                Card {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Toggle(isOn: $idle.enabled) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Dim when idle")
+                                Text("Fade the screen after no input, restore on activity")
+                                    .font(.caption).foregroundStyle(.secondary)
+                            }
+                        }
+                        .toggleStyle(.switch).tint(.orange)
+                        if idle.enabled {
+                            Stepper("After \(idle.minutes) min", value: $idle.minutes, in: 1 ... 30)
+                                .font(.callout)
+                            HStack(spacing: 12) {
+                                Image(systemName: "moon").foregroundStyle(.secondary)
+                                Slider(value: $idle.level, in: 0.3 ... 0.95).tint(.orange)
+                                Text("\(Int(idle.level * 100))%").font(.callout).monospacedDigit()
                                     .frame(width: 40, alignment: .trailing)
                             }
                         }

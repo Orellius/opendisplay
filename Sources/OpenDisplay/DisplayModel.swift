@@ -23,6 +23,7 @@ final class DisplayModel: ObservableObject {
     private let nativeMode: CGDisplayMode?
     private let virtual = VirtualDisplay()
     private(set) var schedule: NightSchedule!
+    let idle = IdleDimmer()
 
     init(displayID: CGDirectDisplayID = CGMainDisplayID()) {
         self.displayID = displayID
