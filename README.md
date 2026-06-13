@@ -31,11 +31,19 @@ Requires macOS 14 or later on Apple Silicon, with the Xcode command line tools.
 
 ```sh
 git clone <repo-url> && cd opendisplay
-scripts/bundle.sh      # builds OpenDisplay.app
+scripts/install.sh     # builds OpenDisplay.app and installs it to /Applications
+```
+
+Or build without installing:
+
+```sh
+scripts/bundle.sh release   # produces ./OpenDisplay.app
 open OpenDisplay.app
 ```
 
 To run from source during development: `swift run`.
+
+Because the app is distributed outside the Mac App Store and signed ad-hoc (not with a paid Apple Developer ID), building it yourself is the supported path - a locally built app is not quarantined. A downloaded prebuilt copy would be blocked by Gatekeeper until notarized; see [CONTRIBUTING.md](CONTRIBUTING.md) for the signing notes.
 
 ## Command line
 
@@ -89,4 +97,12 @@ Tuned for a single external sub-4K display on Apple Silicon. Multi-monitor layou
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+GNU Affero General Public License v3.0 (AGPL-3.0-only). See [LICENSE](LICENSE) and [NOTICE](NOTICE).
+
+OpenDisplay is free to use, study, and modify, but it is strong copyleft: any distributed derivative or network-served version must also be open source under the AGPL, and the copyright attribution must be preserved. The app enforces the attribution at launch - a copy with the copyright notice removed refuses to run.
+
+It includes a small amount of MIT-licensed code adapted from [MonitorControl](https://github.com/MonitorControl/MonitorControl) (the DDC/CI packet framing in `DDC.swift`); that attribution is preserved in the source and in [NOTICE](NOTICE).
+
+## Contributing
+
+Contributions are welcome - see [CONTRIBUTING.md](CONTRIBUTING.md). Note that the project is AGPL and contributions are accepted under that license.
