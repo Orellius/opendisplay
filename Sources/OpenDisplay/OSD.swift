@@ -12,6 +12,7 @@ final class OSDState: ObservableObject {
     @Published var icon = "sun.max.fill"
     @Published var label = ""
     @Published var fraction: Double?
+    @Published var classic = false   // square macOS-classic look vs the glass one
 }
 
 final class OSD {
@@ -27,6 +28,7 @@ final class OSD {
         state.icon = icon
         state.label = label
         state.fraction = fraction
+        state.classic = UserDefaults.standard.bool(forKey: "osd.classic")
         let win = window ?? makeWindow()
         position(win)
         if !win.isVisible { win.alphaValue = 0 }
@@ -89,6 +91,10 @@ extension OSD {
 private struct OSDView: View {
     @ObservedObject var state: OSDState
     var body: some View {
+        if state.classic { classic } else { glass }
+    }
+
+    private var glass: some View {
         VStack(spacing: 14) {
             Image(systemName: state.icon)
                 .font(.system(size: 40, weight: .regular))
@@ -106,5 +112,28 @@ private struct OSDView: View {
         .frame(width: 180, height: 180)
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).strokeBorder(.white.opacity(0.12)))
+    }
+
+    // The pre-Big-Sur OSD: solid dark square, big icon, 16 segment blocks (no number).
+    private var classic: some View {
+        VStack(spacing: 18) {
+            Image(systemName: state.icon)
+                .font(.system(size: 46, weight: .regular))
+                .foregroundStyle(.white)
+            if let f = state.fraction {
+                HStack(spacing: 3) {
+                    ForEach(0 ..< 16, id: \.self) { i in
+                        RoundedRectangle(cornerRadius: 1.5)
+                            .fill((Double(i) + 0.5) / 16.0 <= f ? Color.white : Color.white.opacity(0.25))
+                            .frame(width: 7, height: 13)
+                    }
+                }
+            } else {
+                Text(state.label)
+                    .font(.system(size: 15, weight: .semibold)).foregroundStyle(.white)
+            }
+        }
+        .frame(width: 180, height: 180)
+        .background(Color.black.opacity(0.55), in: RoundedRectangle(cornerRadius: 16))
     }
 }

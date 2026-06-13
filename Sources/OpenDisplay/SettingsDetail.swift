@@ -20,6 +20,7 @@ struct SettingsDetail: View {
     @ObservedObject var idle: IdleDimmer
     @ObservedObject var sleep: DisplaySleepGuard
     @State private var launch = LoginItem.isEnabled
+    @AppStorage("osd.classic") private var classicOSD = false
     @State private var virtualW = (UserDefaults.standard.object(forKey: "virtual.w") as? Int) ?? 2560
     private let virtualPresets = [VirtualRes(w: 1920, h: 1080), VirtualRes(w: 2560, h: 1440),
                                   VirtualRes(w: 3008, h: 1692), VirtualRes(w: 3360, h: 1890)]
@@ -127,6 +128,16 @@ struct SettingsDetail: View {
                             }
                         }
                     }
+                }
+                Card {
+                    Toggle(isOn: $classicOSD) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Classic OSD style")
+                            Text("Square macOS-classic on-screen display instead of glass")
+                                .font(.caption).foregroundStyle(.secondary)
+                        }
+                    }
+                    .toggleStyle(.switch).tint(.orange)
                 }
                 Card {
                     VStack(alignment: .leading, spacing: 8) {
