@@ -12,7 +12,15 @@ struct DisplayDetail: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
-                PaneTitle("Display", sub: info.name)
+                PaneTitle("Display", sub: model.effectiveName)
+                Card {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Name").font(.caption).foregroundStyle(.secondary)
+                        TextField(model.productName, text: Binding(get: { model.displayName },
+                                                                   set: { model.setDisplayName($0) }))
+                            .textFieldStyle(.roundedBorder)
+                    }
+                }
                 Card {
                     VStack(alignment: .leading, spacing: 6) {
                         if let m = info.manufacturerID { InfoRow("Manufacturer", m) }

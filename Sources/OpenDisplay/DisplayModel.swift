@@ -21,6 +21,13 @@ final class DisplayModel: ObservableObject {
     @Published private(set) var favorites: Set<Int> = [] // starred looks-like widths
     @Published private(set) var virtualActive = false    // headless virtual display on
     @Published private(set) var presets: [TonePreset?] = [nil, nil, nil]
+    @Published private(set) var displayName = ""          // custom override, "" = use product name
+
+    /// The custom name when set, otherwise the panel's real product name.
+    var effectiveName: String {
+        let trimmed = displayName.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? productName : trimmed
+    }
 
     var hardwareAvailable: Bool { Brightness.hardwareAvailable }
 
@@ -28,6 +35,7 @@ final class DisplayModel: ObservableObject {
     let canRotate: Bool
     let nativeW: Int
     let nativeH: Int
+    let productName: String
     private let nativeMode: CGDisplayMode?
     private let virtual = VirtualDisplay()
     private(set) var schedule: NightSchedule!
@@ -51,6 +59,7 @@ final class DisplayModel: ObservableObject {
             .filter { $0.pixelWidth == $0.width }.max { $0.pixelWidth < $1.pixelWidth }
         self.nativeW = native?.width ?? 0
         self.nativeH = native?.height ?? 0
+        self.productName = DisplayInfo.gather(displayID).name
         refresh()
         let saved = UserDefaults.standard.integer(forKey: Self.key(displayID))
         if saved > 0 { apply(looksW: saved) }
@@ -58,6 +67,7 @@ final class DisplayModel: ObservableObject {
         brightness = (UserDefaults.standard.object(forKey: Self.brightKey(displayID)) as? Double) ?? 100
         warmth = (UserDefaults.standard.object(forKey: Self.warmthKey(displayID)) as? Double) ?? 0
         contrast = (UserDefaults.standard.object(forKey: Self.contrastKey(displayID)) as? Double) ?? 50
+        displayName = UserDefaults.standard.string(forKey: Self.nameKey(displayID)) ?? ""
         favorites = Set((UserDefaults.standard.array(forKey: Self.favKey(displayID)) as? [Int]) ?? [])
         hardwareDDC = UserDefaults.standard.bool(forKey: Self.ddcKey(displayID))
         presets = (0 ..< 3).map { i in
@@ -88,7 +98,15 @@ final class DisplayModel: ObservableObject {
     static func brightKey(_ id: CGDirectDisplayID) -> String { "brightness.\(id)" }
     static func warmthKey(_ id: CGDirectDisplayID) -> String { "warmth.\(id)" }
     static func contrastKey(_ id: CGDirectDisplayID) -> String { "contrast.\(id)" }
+    static func nameKey(_ id: CGDirectDisplayID) -> String { "name.\(id)" }
     private static func favKey(_ id: CGDirectDisplayID) -> String { "favorites.\(id)" }
+
+    // Keep the raw text live so spaces can be typed; persist trimmed (effectiveName trims).
+    func setDisplayName(_ value: String) {
+        displayName = value
+        UserDefaults.standard.set(value.trimmingCharacters(in: .whitespacesAndNewlines),
+                                  forKey: Self.nameKey(displayID))
+    }
     private static func ddcKey(_ id: CGDirectDisplayID) -> String { "hardwareDDC.\(id)" }
 
     // BetterDisplay #1976: save the current brightness+warmth to a slot, recall it later.

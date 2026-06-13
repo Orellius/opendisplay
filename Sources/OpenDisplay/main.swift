@@ -37,6 +37,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     // Rebuilt each time the menu opens so favorites and the active mode stay current.
     func menuNeedsUpdate(_ menu: NSMenu) {
         menu.removeAllItems()
+        menu.addItem(disabledItem(model.effectiveName))
+        menu.addItem(.separator())
         let open = NSMenuItem(title: "Open OpenDisplay…", action: #selector(openPanel), keyEquivalent: "o")
         open.target = self
         menu.addItem(open)
