@@ -4,4 +4,5 @@
 .DS_Store
 xcuserdata/
 *.xcodeproj
-docs/          # internal docs are symlinks to a local store, never committed
+# internal docs: symlinks to a local store, never committed
+docs/
