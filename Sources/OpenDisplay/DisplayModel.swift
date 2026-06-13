@@ -22,6 +22,7 @@ final class DisplayModel: ObservableObject {
     let canRotate: Bool
     private let nativeMode: CGDisplayMode?
     private let virtual = VirtualDisplay()
+    private(set) var schedule: NightSchedule!
 
     init(displayID: CGDirectDisplayID = CGMainDisplayID()) {
         self.displayID = displayID
@@ -35,6 +36,22 @@ final class DisplayModel: ObservableObject {
         warmth = (UserDefaults.standard.object(forKey: Self.warmthKey(displayID)) as? Double) ?? 0
         favorites = Set((UserDefaults.standard.array(forKey: Self.favKey(displayID)) as? [Int]) ?? [])
         applyTone()
+        // The schedule, when enabled, drives brightness/warmth live (without touching the
+        // manual saved values); when disabled it restores them. Created last so its
+        // closures capture a fully-initialized model.
+        schedule = NightSchedule(
+            apply: { [weak self] b, w in
+                guard let self else { return }
+                self.brightness = b
+                self.warmth = w
+                Brightness.apply(brightness: b / 100, warmth: w / 100, on: self.displayID)
+            },
+            restore: { [weak self] in
+                guard let self else { return }
+                self.brightness = (UserDefaults.standard.object(forKey: Self.brightKey(self.displayID)) as? Double) ?? 100
+                self.warmth = (UserDefaults.standard.object(forKey: Self.warmthKey(self.displayID)) as? Double) ?? 0
+                self.applyTone()
+            })
     }
 
     static func key(_ id: CGDirectDisplayID) -> String { "looksW.\(id)" }

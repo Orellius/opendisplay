@@ -49,7 +49,7 @@ struct ControlPanel: View {
                 case .resolution: ResolutionDetail(model: model)
                 case .brightness: BrightnessDetail(model: model)
                 case .display: DisplayDetail(model: model)
-                case .settings: SettingsDetail(model: model)
+                case .settings: SettingsDetail(model: model, schedule: model.schedule)
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -256,6 +256,7 @@ private struct VirtualRes: Identifiable, Hashable {
 
 private struct SettingsDetail: View {
     @ObservedObject var model: DisplayModel
+    @ObservedObject var schedule: NightSchedule
     @State private var launch = LoginItem.isEnabled
     @State private var virtualW = 2560
     private let virtualPresets = [VirtualRes(w: 1920, h: 1080), VirtualRes(w: 2560, h: 1440),
@@ -290,6 +291,37 @@ private struct SettingsDetail: View {
                             ForEach(virtualPresets) { Text($0.label).tag($0.w) }
                         }
                         .disabled(model.virtualActive)
+                    }
+                }
+                Card {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Toggle(isOn: $schedule.enabled) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Night schedule")
+                                Text("Warm and dim on a daily timer")
+                                    .font(.caption).foregroundStyle(.secondary)
+                            }
+                        }
+                        .toggleStyle(.switch).tint(.orange)
+                        if schedule.enabled {
+                            HStack(spacing: 10) {
+                                Stepper("From \(schedule.startHour):00", value: $schedule.startHour, in: 0 ... 23)
+                                Stepper("to \(schedule.endHour):00", value: $schedule.endHour, in: 0 ... 23)
+                            }
+                            .font(.callout)
+                            HStack(spacing: 12) {
+                                Image(systemName: "thermometer.sun").foregroundStyle(.secondary)
+                                Slider(value: $schedule.nightWarmth, in: 0 ... 100).tint(.orange)
+                                Text("\(Int(schedule.nightWarmth))%").font(.callout).monospacedDigit()
+                                    .frame(width: 40, alignment: .trailing)
+                            }
+                            HStack(spacing: 12) {
+                                Image(systemName: "sun.min").foregroundStyle(.secondary)
+                                Slider(value: $schedule.nightBrightness, in: 25 ... 100).tint(.orange)
+                                Text("\(Int(schedule.nightBrightness))%").font(.callout).monospacedDigit()
+                                    .frame(width: 40, alignment: .trailing)
+                            }
+                        }
                     }
                 }
                 Card {
