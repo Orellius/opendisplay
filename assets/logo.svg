@@ -1,0 +1,15 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="OpenDisplay">
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1b1e23"/>
+      <stop offset="1" stop-color="#0e1013"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#tile)"/>
+  <rect x="116" y="116" width="280" height="280" rx="40" fill="none" stroke="#3a3f47" stroke-width="10"/>
+  <!-- one point becomes four pixels: the definition of HiDPI -->
+  <rect x="156" y="156" width="92" height="92" rx="22" fill="#E8E6E1"/>
+  <rect x="264" y="156" width="92" height="92" rx="22" fill="#E8E6E1"/>
+  <rect x="156" y="264" width="92" height="92" rx="22" fill="#E8E6E1"/>
+  <rect x="264" y="264" width="92" height="92" rx="22" fill="#FF6A00"/>
+</svg>

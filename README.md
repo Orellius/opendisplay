@@ -1,42 +1,52 @@
-# OpenDisplay
+<p align="center">
+  <img src="assets/logo.png" width="116" alt="OpenDisplay">
+</p>
+<h1 align="center">OpenDisplay</h1>
+<p align="center">HiDPI resolutions for sub-4K external monitors on Apple Silicon.</p>
 
-Unlock HiDPI ("Retina") rendering on sub-4K external monitors driven by an Apple Silicon Mac. Free, open source, no closed app.
+---
 
-macOS generates proper HiDPI display modes for most external panels but hides them from System Settings and the public `CGDisplayCopyAllDisplayModes` API, so on a 1440p monitor you only get soft 1x scaling. OpenDisplay reads the hidden modes through the private SkyLight enumeration and applies them with the standard public configuration call. The result is the same crisp, 2x-rendered desktop a paid tool gives you, in a few hundred lines you can audit.
+On Apple Silicon, macOS only offers HiDPI ("Retina") scaling on 4K and 5K panels. Drive a 1440p monitor and the only scaled options are rendered at 1x, so text and UI look soft. The HiDPI modes for these panels do exist: macOS generates them but leaves them out of System Settings and the public `CGDisplayCopyAllDisplayModes` API. OpenDisplay reads them from the private SkyLight enumeration and applies them with the standard public configuration call.
 
-## What it does (v0.1)
+## Features
 
-- Lists the HiDPI resolutions your display actually supports (the ones macOS hides).
-- Applies one live from a menubar quick-pick or a control-panel window.
-- Remembers your choice and re-applies it when the display reconnects.
+- Lists the HiDPI modes your display actually supports, not just the ones System Settings shows.
+- Apply one from the menubar or the control-panel window; it takes effect immediately.
+- Remembers your choice and reapplies it when the display reconnects.
+- Around 350 lines of Swift, no dependencies, no kernel extension.
 
-## What it does not do (yet)
+## Install
 
-Brightness/DDC, virtual displays, mirroring, and XDR brightness are out of scope for v0.1. Open an issue if you want one.
-
-## The honest limit
-
-This is the rendering half of "Retina," not the density half. A HiDPI mode renders at 2x and downsamples to your panel's physical pixels, so text and UI are smoother and crisper than native 1x. It cannot add physical pixels: a 27" 1440p panel is ~109 PPI, and a true Retina display is ~218 PPI. Scaled-down HiDPI (for example a 1920x1080 workspace) is the most noticeable improvement on a 1440p panel because the UI is larger and 2x-rendered. For true Retina density you need a higher-PPI (5K) panel.
-
-## Build and run
+Requires macOS 14 or later on Apple Silicon, with the Xcode command line tools.
 
 ```sh
-swift build            # or: swift run
-scripts/bundle.sh      # produces OpenDisplay.app (menubar agent)
+git clone <repo-url> && cd opendisplay
+scripts/bundle.sh      # builds OpenDisplay.app
 open OpenDisplay.app
 ```
 
-Requires macOS 14+ on Apple Silicon and the Xcode command line tools.
+To run from source during development: `swift run`.
 
 ## How it works
 
-- `SkyLight.swift` resolves four private `SLDisplayCopyAllDisplayModes` / `SLDisplayMode*` symbols at runtime via `dlsym`, enumerates modes with the `ShowDuplicateLowResolutionModes` option (which reveals the HiDPI ones), and applies the chosen mode with the public `CGConfigureDisplayWithDisplayMode`.
-- Because the private symbols have no headers and were renamed once already (the old `CGS*` names became `SL*`), every lookup is optional and the app reports cleanly if a future macOS moves them.
+`SLDisplayCopyAllDisplayModes` in the private SkyLight framework returns a display's full mode list, including HiDPI variants, when passed the `kCGDisplayShowDuplicateLowResolutionModes` option. The public `CGDisplayCopyAllDisplayModes` filters those out, which is why they never reach System Settings. OpenDisplay enumerates the private list, picks a HiDPI mode (one whose pixel dimensions are twice its point dimensions), and applies it with the public `CGConfigureDisplayWithDisplayMode`.
 
-## Distribution
+The four private symbols are resolved at runtime with `dlsym`, and every lookup is optional. If a future macOS renames them, the app reports that the API is unavailable instead of crashing. That surface was already renamed once, from the `CGS*` names to `SL*`, so the guard is not theoretical.
 
-Distributed outside the Mac App Store (the App Store forbids private API use). Notarization works normally; it is a malware scan, not API policing.
+## Compatibility
+
+Built and verified on macOS 26 (Apple Silicon). Distributed outside the Mac App Store, which forbids private API use. Notarization is unaffected, since it scans for malware rather than policing APIs.
+
+## The limit worth knowing
+
+A HiDPI mode renders at 2x and downsamples to the panel's physical pixels. Text and edges get sharper; the physical pixel count does not change. A 27-inch 1440p panel is about 109 PPI, while a Retina-class panel is about 218. The improvement is most visible on scaled-down resolutions, where the workspace is larger and rendered at 2x. True Retina density requires a higher-PPI display.
+
+## Roadmap
+
+- Per-display selection for multi-monitor setups.
+- Launch at login.
+- Under consideration: brightness over DDC, mirroring, virtual displays.
 
 ## License
 
-MIT. See LICENSE.
+MIT. See [LICENSE](LICENSE).
