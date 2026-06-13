@@ -38,6 +38,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         native.state = model.currentLooksW == 0 ? .on : .off
         menu.addItem(native)
         menu.addItem(.separator())
+        let login = NSMenuItem(title: "Start at Login", action: #selector(toggleLogin), keyEquivalent: "")
+        login.target = self
+        login.state = LoginItem.isEnabled ? .on : .off
+        menu.addItem(login)
+        menu.addItem(.separator())
         menu.addItem(NSMenuItem(title: "Quit OpenDisplay",
                                 action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
         statusItem.menu = menu
@@ -65,6 +70,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func quickNative() {
         model.applyNative()
+        buildMenu()
+    }
+
+    @objc private func toggleLogin() {
+        LoginItem.toggle()
         buildMenu()
     }
 
