@@ -32,6 +32,14 @@ final class DisplayModel: ObservableObject {
     private(set) var schedule: NightSchedule!
     let idle = IdleDimmer()
 
+    // Gamma bottoms out at 25% luminance (the floor in Brightness). Below this slider
+    // value the overlay ramps in on top of the gamma floor for true deep dimming; at or
+    // above it the overlay is off and brightness is pure gamma (so CLI/Shortcuts, which
+    // can't hold a window, match the GUI for the whole normal range).
+    private let deepDim = DimOverlay()
+    private static let deepDimFloor = 20.0
+    private static let deepDimMaxAlpha = 0.88
+
     init(displayID: CGDirectDisplayID = CGMainDisplayID()) {
         self.displayID = displayID
         self.nativeMode = CGDisplayCopyDisplayMode(displayID)
@@ -63,7 +71,7 @@ final class DisplayModel: ObservableObject {
                 guard let self else { return }
                 self.brightness = b
                 self.warmth = w
-                Brightness.apply(brightness: b / 100, warmth: w / 100, on: self.displayID)
+                self.applyTone()
             },
             restore: { [weak self] in
                 guard let self else { return }
@@ -104,6 +112,13 @@ final class DisplayModel: ObservableObject {
 
     private func applyTone() {
         Brightness.apply(brightness: brightness / 100.0, warmth: warmth / 100.0, on: displayID)
+        applyDeepDim()
+    }
+
+    private func applyDeepDim() {
+        let alpha = brightness >= Self.deepDimFloor ? 0
+            : (Self.deepDimFloor - brightness) / Self.deepDimFloor * Self.deepDimMaxAlpha
+        deepDim.setAlpha(alpha)
     }
 
     func setBrightness(_ value: Double) {
