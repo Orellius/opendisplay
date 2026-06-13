@@ -23,7 +23,8 @@ struct SetBrightnessIntent: AppIntent {
         let id = mainID()
         let v = max(0, min(100, level))
         let warmth = UserDefaults.standard.object(forKey: DisplayModel.warmthKey(id)) as? Double ?? 0
-        Brightness.apply(brightness: Double(v) / 100, warmth: warmth / 100, on: id)
+        let contrast = UserDefaults.standard.object(forKey: DisplayModel.contrastKey(id)) as? Double ?? 50
+        Brightness.apply(brightness: Double(v) / 100, warmth: warmth / 100, contrast: contrast / 100, on: id)
         UserDefaults.standard.set(Double(v), forKey: DisplayModel.brightKey(id))
         return .result()
     }
@@ -40,8 +41,27 @@ struct SetWarmthIntent: AppIntent {
         let id = mainID()
         let v = max(0, min(100, level))
         let bright = UserDefaults.standard.object(forKey: DisplayModel.brightKey(id)) as? Double ?? 100
-        Brightness.apply(brightness: bright / 100, warmth: Double(v) / 100, on: id)
+        let contrast = UserDefaults.standard.object(forKey: DisplayModel.contrastKey(id)) as? Double ?? 50
+        Brightness.apply(brightness: bright / 100, warmth: Double(v) / 100, contrast: contrast / 100, on: id)
         UserDefaults.standard.set(Double(v), forKey: DisplayModel.warmthKey(id))
+        return .result()
+    }
+}
+
+struct SetContrastIntent: AppIntent {
+    static var title: LocalizedStringResource = "Set Display Contrast"
+    static var description = IntentDescription("Set contrast from 0 to 100 (50 is neutral).")
+
+    @Parameter(title: "Contrast", default: 50)
+    var level: Int
+
+    func perform() async throws -> some IntentResult {
+        let id = mainID()
+        let v = max(0, min(100, level))
+        let bright = UserDefaults.standard.object(forKey: DisplayModel.brightKey(id)) as? Double ?? 100
+        let warmth = UserDefaults.standard.object(forKey: DisplayModel.warmthKey(id)) as? Double ?? 0
+        Brightness.apply(brightness: bright / 100, warmth: warmth / 100, contrast: Double(v) / 100, on: id)
+        UserDefaults.standard.set(Double(v), forKey: DisplayModel.contrastKey(id))
         return .result()
     }
 }
@@ -86,6 +106,9 @@ struct OpenDisplayShortcuts: AppShortcutsProvider {
         AppShortcut(intent: SetWarmthIntent(),
                     phrases: ["Set \(.applicationName) warmth"],
                     shortTitle: "Set Warmth", systemImageName: "thermometer.sun")
+        AppShortcut(intent: SetContrastIntent(),
+                    phrases: ["Set \(.applicationName) contrast"],
+                    shortTitle: "Set Contrast", systemImageName: "circle.lefthalf.filled")
         AppShortcut(intent: SetResolutionIntent(),
                     phrases: ["Set \(.applicationName) resolution"],
                     shortTitle: "Set Resolution", systemImageName: "rectangle.on.rectangle")

@@ -34,6 +34,18 @@ struct BrightnessDetail: View {
                             .monospacedDigit().frame(width: 44, alignment: .trailing)
                     }
                 }
+                Card {
+                    HStack(spacing: 14) {
+                        Image(systemName: "circle.lefthalf.filled").foregroundStyle(.secondary)
+                        Slider(value: Binding(get: { model.contrast },
+                                              set: { model.setContrast($0) }),
+                               in: 0 ... 100)
+                        .tint(.orange)
+                        Image(systemName: "circle.righthalf.filled").foregroundStyle(.orange)
+                        Text("\(Int(model.contrast))%").font(.system(.body, design: .rounded))
+                            .monospacedDigit().frame(width: 44, alignment: .trailing)
+                    }
+                }
                 VStack(alignment: .leading, spacing: 6) {
                     HStack(spacing: 8) {
                         ForEach(0 ..< 3, id: \.self) { i in

@@ -14,6 +14,7 @@ final class DisplayModel: ObservableObject {
     @Published private(set) var rotation: Int = 0        // 0/90/180/270 degrees
     @Published var brightness: Double = 100              // software dimming, 0...100
     @Published var warmth: Double = 0                    // color temperature, 0...100
+    @Published var contrast: Double = 50                 // transfer spread, 0...100, 50 neutral
     @Published var hardwareDDC: Bool = false {           // also drive DDC when set
         didSet { UserDefaults.standard.set(hardwareDDC, forKey: Self.ddcKey(displayID)) }
     }
@@ -55,6 +56,7 @@ final class DisplayModel: ObservableObject {
 
         brightness = (UserDefaults.standard.object(forKey: Self.brightKey(displayID)) as? Double) ?? 100
         warmth = (UserDefaults.standard.object(forKey: Self.warmthKey(displayID)) as? Double) ?? 0
+        contrast = (UserDefaults.standard.object(forKey: Self.contrastKey(displayID)) as? Double) ?? 50
         favorites = Set((UserDefaults.standard.array(forKey: Self.favKey(displayID)) as? [Int]) ?? [])
         hardwareDDC = UserDefaults.standard.bool(forKey: Self.ddcKey(displayID))
         presets = (0 ..< 3).map { i in
@@ -84,6 +86,7 @@ final class DisplayModel: ObservableObject {
     static func key(_ id: CGDirectDisplayID) -> String { "looksW.\(id)" }
     static func brightKey(_ id: CGDirectDisplayID) -> String { "brightness.\(id)" }
     static func warmthKey(_ id: CGDirectDisplayID) -> String { "warmth.\(id)" }
+    static func contrastKey(_ id: CGDirectDisplayID) -> String { "contrast.\(id)" }
     private static func favKey(_ id: CGDirectDisplayID) -> String { "favorites.\(id)" }
     private static func ddcKey(_ id: CGDirectDisplayID) -> String { "hardwareDDC.\(id)" }
 
@@ -111,7 +114,8 @@ final class DisplayModel: ObservableObject {
     }
 
     private func applyTone() {
-        Brightness.apply(brightness: brightness / 100.0, warmth: warmth / 100.0, on: displayID)
+        Brightness.apply(brightness: brightness / 100.0, warmth: warmth / 100.0,
+                         contrast: contrast / 100.0, on: displayID)
         applyDeepDim()
     }
 
@@ -132,6 +136,12 @@ final class DisplayModel: ObservableObject {
         warmth = value
         applyTone()
         UserDefaults.standard.set(value, forKey: Self.warmthKey(displayID))
+    }
+
+    func setContrast(_ value: Double) {
+        contrast = value
+        applyTone()
+        UserDefaults.standard.set(value, forKey: Self.contrastKey(displayID))
     }
 
     func nudgeBrightness(_ delta: Double) {
@@ -164,6 +174,7 @@ final class DisplayModel: ObservableObject {
         applyNative()
         setBrightness(100)
         setWarmth(0)
+        setContrast(50)
         preBlackout = nil
         OSD.text("arrow.counterclockwise", "Reset")
     }

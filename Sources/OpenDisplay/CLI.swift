@@ -21,6 +21,7 @@ enum CLI {
         case "native": setNative(id)
         case "brightness": setBrightness(id, args)
         case "warmth": setWarmth(id, args)
+        case "contrast": setContrast(id, args)
         case "refresh": setRefresh(id, args)
         case "rotate": setRotate(id, args)
         case "virtual": holdVirtual(args)   // never returns
@@ -69,7 +70,8 @@ enum CLI {
     private static func setBrightness(_ id: CGDirectDisplayID, _ args: [String]) {
         guard args.count >= 3, let v = Double(args[2]), (0...100).contains(v) else { die("usage: opendisplay brightness <0-100>") }
         let warmth = UserDefaults.standard.object(forKey: DisplayModel.warmthKey(id)) as? Double ?? 0
-        Brightness.apply(brightness: v / 100, warmth: warmth / 100, on: id)
+        let contrast = UserDefaults.standard.object(forKey: DisplayModel.contrastKey(id)) as? Double ?? 50
+        Brightness.apply(brightness: v / 100, warmth: warmth / 100, contrast: contrast / 100, on: id)
         UserDefaults.standard.set(v, forKey: DisplayModel.brightKey(id))
         print("brightness \(Int(v))%")
     }
@@ -77,9 +79,19 @@ enum CLI {
     private static func setWarmth(_ id: CGDirectDisplayID, _ args: [String]) {
         guard args.count >= 3, let v = Double(args[2]), (0...100).contains(v) else { die("usage: opendisplay warmth <0-100>") }
         let bright = UserDefaults.standard.object(forKey: DisplayModel.brightKey(id)) as? Double ?? 100
-        Brightness.apply(brightness: bright / 100, warmth: v / 100, on: id)
+        let contrast = UserDefaults.standard.object(forKey: DisplayModel.contrastKey(id)) as? Double ?? 50
+        Brightness.apply(brightness: bright / 100, warmth: v / 100, contrast: contrast / 100, on: id)
         UserDefaults.standard.set(v, forKey: DisplayModel.warmthKey(id))
         print("warmth \(Int(v))%")
+    }
+
+    private static func setContrast(_ id: CGDirectDisplayID, _ args: [String]) {
+        guard args.count >= 3, let v = Double(args[2]), (0...100).contains(v) else { die("usage: opendisplay contrast <0-100>") }
+        let bright = UserDefaults.standard.object(forKey: DisplayModel.brightKey(id)) as? Double ?? 100
+        let warmth = UserDefaults.standard.object(forKey: DisplayModel.warmthKey(id)) as? Double ?? 0
+        Brightness.apply(brightness: bright / 100, warmth: warmth / 100, contrast: v / 100, on: id)
+        UserDefaults.standard.set(v, forKey: DisplayModel.contrastKey(id))
+        print("contrast \(Int(v))% (50 = neutral)")
     }
 
     private static func setRefresh(_ id: CGDirectDisplayID, _ args: [String]) {
@@ -114,6 +126,7 @@ enum CLI {
           native               return to the native (non-HiDPI) mode
           brightness <0-100>   software brightness
           warmth <0-100>       color warmth
+          contrast <0-100>     contrast (50 = neutral)
           refresh <hz>         refresh rate at the current resolution
           rotate <0|90|180|270>  rotate the display
           virtual [w] [h]      create a headless HiDPI display and hold it
