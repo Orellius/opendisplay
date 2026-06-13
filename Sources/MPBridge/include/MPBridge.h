@@ -6,6 +6,7 @@
 // unsupported on this display or the private API is unavailable on this macOS.
 
 #import <CoreGraphics/CoreGraphics.h>
+#import "CGVirtualDisplay.h"   // umbrella re-export so Swift sees the virtual-display classes
 
 BOOL OD_DisplayCanRotate(CGDirectDisplayID display);
 BOOL OD_DisplayRotate(CGDirectDisplayID display, int degrees);

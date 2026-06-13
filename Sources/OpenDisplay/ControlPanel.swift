@@ -213,9 +213,18 @@ private struct DisplayDetail: View {
     }
 }
 
+private struct VirtualRes: Identifiable, Hashable {
+    let w: Int; let h: Int
+    var id: Int { w }
+    var label: String { "\(w) × \(h)" }
+}
+
 private struct SettingsDetail: View {
     @ObservedObject var model: DisplayModel
     @State private var launch = LoginItem.isEnabled
+    @State private var virtualW = 2560
+    private let virtualPresets = [VirtualRes(w: 1920, h: 1080), VirtualRes(w: 2560, h: 1440),
+                                  VirtualRes(w: 3008, h: 1692), VirtualRes(w: 3360, h: 1890)]
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
@@ -226,6 +235,27 @@ private struct SettingsDetail: View {
                         Text("Start at login")
                     }
                     .toggleStyle(.switch).tint(.orange)
+                }
+                Card {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Toggle(isOn: Binding(get: { model.virtualActive }, set: { on in
+                            if on {
+                                let r = virtualPresets.first { $0.w == virtualW } ?? virtualPresets[1]
+                                model.startVirtual(looksW: r.w, looksH: r.h)
+                            } else { model.stopVirtual() }
+                        })) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Headless virtual display")
+                                Text("A HiDPI surface for remote access when no panel is attached")
+                                    .font(.caption).foregroundStyle(.secondary)
+                            }
+                        }
+                        .toggleStyle(.switch).tint(.orange)
+                        Picker("Resolution", selection: $virtualW) {
+                            ForEach(virtualPresets) { Text($0.label).tag($0.w) }
+                        }
+                        .disabled(model.virtualActive)
+                    }
                 }
                 Card {
                     InfoRow("OpenDisplay", "v1.0")

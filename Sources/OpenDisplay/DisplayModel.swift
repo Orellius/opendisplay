@@ -14,12 +14,14 @@ final class DisplayModel: ObservableObject {
     @Published var warmth: Double = 0                    // color temperature, 0...100
     @Published var hardwareDDC: Bool = false             // also drive DDC when set
     @Published private(set) var favorites: Set<Int> = [] // starred looks-like widths
+    @Published private(set) var virtualActive = false    // headless virtual display on
 
     var hardwareAvailable: Bool { Brightness.hardwareAvailable }
 
     let displayID: CGDirectDisplayID
     let canRotate: Bool
     private let nativeMode: CGDisplayMode?
+    private let virtual = VirtualDisplay()
 
     init(displayID: CGDirectDisplayID = CGMainDisplayID()) {
         self.displayID = displayID
@@ -103,5 +105,14 @@ final class DisplayModel: ObservableObject {
         guard Rotation.rotate(displayID, to: degrees) else { return }
         // Orientation change is async and reshapes the mode list; resettle shortly after.
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { self.refresh() }
+    }
+
+    func startVirtual(looksW: Int, looksH: Int) {
+        if virtual.start(looksW: looksW, looksH: looksH) { virtualActive = true }
+    }
+
+    func stopVirtual() {
+        virtual.stop()
+        virtualActive = false
     }
 }
