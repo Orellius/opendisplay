@@ -48,6 +48,8 @@ final class Hotkeys {
         bind(2, key: UInt32(kVK_ANSI_LeftBracket),  mod: mod) { [weak self] in self?.model.nudgeBrightness(-Self.step) }
         bind(3, key: UInt32(kVK_ANSI_Quote),        mod: mod) { [weak self] in self?.model.nudgeWarmth(Self.step) }
         bind(4, key: UInt32(kVK_ANSI_Semicolon),    mod: mod) { [weak self] in self?.model.nudgeWarmth(-Self.step) }
+        bind(5, key: UInt32(kVK_ANSI_B),            mod: mod) { [weak self] in self?.model.toggleBlackout() }
+        bind(6, key: UInt32(kVK_ANSI_R),            mod: mod) { [weak self] in self?.model.quickReset() }
     }
 
     private func bind(_ id: UInt32, key: UInt32, mod: UInt32, action: @escaping () -> Void) {

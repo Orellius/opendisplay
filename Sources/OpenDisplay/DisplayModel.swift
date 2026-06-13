@@ -76,6 +76,38 @@ final class DisplayModel: ObservableObject {
         OSD.warmth(warmth)
     }
 
+    private var preBlackout: Double?
+
+    // BetterDisplay #1448: one toggle to dim to the floor and back to where it was.
+    func toggleBlackout() {
+        if let prev = preBlackout {
+            setBrightness(prev); preBlackout = nil
+            OSD.brightness(prev)
+        } else {
+            preBlackout = brightness
+            setBrightness(0)
+            OSD.brightness(0)
+        }
+    }
+
+    // BetterDisplay #1208: panic key back to a known-good state when a scaled-res
+    // experiment leaves the screen unusable.
+    func quickReset() {
+        applyNative()
+        setBrightness(100)
+        setWarmth(0)
+        preBlackout = nil
+        OSD.text("arrow.counterclockwise", "Reset")
+    }
+
+    // BetterDisplay #5423: gamma and the chosen mode can drop on wake; reapply them.
+    func reapply() {
+        let saved = UserDefaults.standard.integer(forKey: Self.key(displayID))
+        if saved > 0 { apply(looksW: saved) }
+        applyTone()
+        detectCurrent()
+    }
+
     func refresh() {
         modes = SkyLight.hidpiModes(for: displayID)
         detectCurrent()

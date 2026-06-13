@@ -20,6 +20,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         statusItem.menu = menu
         hotkeys = Hotkeys(model: model)
         CGDisplayRegisterReconfigurationCallback(displayReconfig, Unmanaged.passUnretained(self).toOpaque())
+        NSWorkspace.shared.notificationCenter.addObserver(
+            self, selector: #selector(didWake), name: NSWorkspace.didWakeNotification, object: nil)
+    }
+
+    @objc private func didWake() {
+        // The display takes a moment to settle after wake before it accepts a reapply.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in self?.model.reapply() }
     }
 
     func applicationWillTerminate(_ note: Notification) {
