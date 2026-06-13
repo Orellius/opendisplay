@@ -12,6 +12,7 @@ final class DisplayModel: ObservableObject {
     @Published var brightness: Double = 100              // software dimming, 0...100
     @Published var warmth: Double = 0                    // color temperature, 0...100
     @Published var hardwareDDC: Bool = false             // also drive DDC when set
+    @Published private(set) var favorites: Set<Int> = [] // starred looks-like widths
 
     var hardwareAvailable: Bool { Brightness.hardwareAvailable }
 
@@ -27,12 +28,21 @@ final class DisplayModel: ObservableObject {
 
         brightness = (UserDefaults.standard.object(forKey: Self.brightKey(displayID)) as? Double) ?? 100
         warmth = (UserDefaults.standard.object(forKey: Self.warmthKey(displayID)) as? Double) ?? 0
+        favorites = Set((UserDefaults.standard.array(forKey: Self.favKey(displayID)) as? [Int]) ?? [])
         applyTone()
     }
 
     private static func key(_ id: CGDirectDisplayID) -> String { "looksW.\(id)" }
     private static func brightKey(_ id: CGDirectDisplayID) -> String { "brightness.\(id)" }
     private static func warmthKey(_ id: CGDirectDisplayID) -> String { "warmth.\(id)" }
+    private static func favKey(_ id: CGDirectDisplayID) -> String { "favorites.\(id)" }
+
+    func isFavorite(_ looksW: Int) -> Bool { favorites.contains(looksW) }
+
+    func toggleFavorite(_ looksW: Int) {
+        if favorites.contains(looksW) { favorites.remove(looksW) } else { favorites.insert(looksW) }
+        UserDefaults.standard.set(Array(favorites), forKey: Self.favKey(displayID))
+    }
 
     private func applyTone() {
         Brightness.apply(brightness: brightness / 100.0, warmth: warmth / 100.0, on: displayID)

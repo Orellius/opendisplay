@@ -72,9 +72,11 @@ private struct ResolutionDetail: View {
                         .foregroundStyle(.secondary).padding(.top, 8)
                 } else {
                     ForEach(model.modes) { mode in
-                        ResRow(mode: mode, active: model.currentLooksW == mode.looksW) {
-                            model.apply(looksW: mode.looksW)
-                        }
+                        ResRow(mode: mode,
+                               active: model.currentLooksW == mode.looksW,
+                               favorite: model.isFavorite(mode.looksW),
+                               apply: { model.apply(looksW: mode.looksW) },
+                               toggleFav: { model.toggleFavorite(mode.looksW) })
                     }
                     ResRowPlain(title: "Native (no HiDPI)", sub: "2560 × 1440", active: model.currentLooksW == 0) {
                         model.applyNative()
@@ -249,25 +251,35 @@ private struct Card<Content: View>: View {
 }
 
 private struct ResRow: View {
-    let mode: DisplayMode; let active: Bool; let action: () -> Void
+    let mode: DisplayMode; let active: Bool; let favorite: Bool
+    let apply: () -> Void; let toggleFav: () -> Void
     var body: some View {
-        Button(action: action) {
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("\(mode.looksW) × \(mode.looksH)").font(.body)
-                    Text("\(mode.pxW)×\(mode.pxH) rendered · \(Int(mode.hz)) Hz")
-                        .font(.caption).foregroundStyle(.secondary)
+        HStack(spacing: 8) {
+            Button(action: apply) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("\(mode.looksW) × \(mode.looksH)").font(.body)
+                        Text("\(mode.pxW)×\(mode.pxH) rendered · \(Int(mode.hz)) Hz")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    Text("HiDPI").font(.caption2).fontWeight(.bold)
+                        .padding(.horizontal, 6).padding(.vertical, 2)
+                        .background(.orange.opacity(0.18), in: Capsule())
+                        .foregroundStyle(.orange)
+                    if active { Image(systemName: "checkmark").foregroundStyle(.orange) }
                 }
-                Spacer()
-                Text("HiDPI").font(.caption2).fontWeight(.bold)
-                    .padding(.horizontal, 6).padding(.vertical, 2)
-                    .background(.orange.opacity(0.18), in: Capsule())
-                    .foregroundStyle(.orange)
-                if active { Image(systemName: "checkmark").foregroundStyle(.orange) }
+                .contentShape(Rectangle())
             }
-            .padding(.vertical, 8).padding(.horizontal, 12).contentShape(Rectangle())
+            .buttonStyle(.plain)
+            Button(action: toggleFav) {
+                Image(systemName: favorite ? "star.fill" : "star")
+                    .foregroundStyle(favorite ? .yellow : .secondary)
+            }
+            .buttonStyle(.plain)
+            .help(favorite ? "Remove from menu bar" : "Pin to menu bar")
         }
-        .buttonStyle(.plain)
+        .padding(.vertical, 8).padding(.horizontal, 12)
         .background(active ? Color.orange.opacity(0.14) : .clear, in: RoundedRectangle(cornerRadius: 10))
     }
 }

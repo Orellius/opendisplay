@@ -5,7 +5,7 @@
 import Cocoa
 import SwiftUI
 
-final class AppDelegate: NSObject, NSApplicationDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var statusItem: NSStatusItem!
     private let model = DisplayModel()
     private var panel: NSWindow?
@@ -15,7 +15,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         statusItem.button?.image = NSImage(systemSymbolName: "sparkles.rectangle.stack",
                                            accessibilityDescription: "OpenDisplay")
-        buildMenu()
+        let menu = NSMenu()
+        menu.delegate = self
+        statusItem.menu = menu
         hotkeys = Hotkeys(model: model)
         CGDisplayRegisterReconfigurationCallback(displayReconfig, Unmanaged.passUnretained(self).toOpaque())
     }
@@ -24,20 +26,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Brightness.restore()   // don't leave the panel dimmed after quit
     }
 
-    func buildMenu() {
-        let menu = NSMenu()
+    // Rebuilt each time the menu opens so favorites and the active mode stay current.
+    func menuNeedsUpdate(_ menu: NSMenu) {
+        menu.removeAllItems()
         let open = NSMenuItem(title: "Open OpenDisplay…", action: #selector(openPanel), keyEquivalent: "o")
         open.target = self
         menu.addItem(open)
         menu.addItem(.separator())
-        for mode in model.modes.prefix(6) {
-            let item = NSMenuItem(title: "\(mode.looksW) × \(mode.looksH)  HiDPI",
-                                  action: #selector(quickPick(_:)), keyEquivalent: "")
-            item.representedObject = mode.looksW
-            item.state = model.currentLooksW == mode.looksW ? .on : .off
-            item.target = self
-            menu.addItem(item)
+
+        let favorites = model.modes.filter { model.isFavorite($0.looksW) }
+        let quick = favorites.isEmpty ? Array(model.modes.prefix(6)) : favorites
+        for mode in quick { menu.addItem(resItem(mode, starred: !favorites.isEmpty)) }
+
+        if model.modes.count > quick.count {
+            let all = NSMenuItem(title: "All Resolutions", action: nil, keyEquivalent: "")
+            let sub = NSMenu()
+            for mode in model.modes { sub.addItem(resItem(mode, starred: false)) }
+            all.submenu = sub
+            menu.addItem(all)
         }
+
         menu.addItem(.separator())
         let native = NSMenuItem(title: "Native", action: #selector(quickNative), keyEquivalent: "")
         native.target = self
@@ -51,7 +59,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(.separator())
         menu.addItem(NSMenuItem(title: "Quit OpenDisplay",
                                 action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
-        statusItem.menu = menu
+    }
+
+    private func resItem(_ mode: DisplayMode, starred: Bool) -> NSMenuItem {
+        let item = NSMenuItem(title: "\(mode.looksW) × \(mode.looksH)  HiDPI",
+                              action: #selector(quickPick(_:)), keyEquivalent: "")
+        if starred { item.image = NSImage(systemSymbolName: "star.fill", accessibilityDescription: nil) }
+        item.representedObject = mode.looksW
+        item.state = model.currentLooksW == mode.looksW ? .on : .off
+        item.target = self
+        return item
     }
 
     @objc private func openPanel() {
@@ -72,22 +89,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func quickPick(_ sender: NSMenuItem) {
         guard let looksW = sender.representedObject as? Int else { return }
         model.apply(looksW: looksW)
-        buildMenu()
     }
 
     @objc private func quickNative() {
         model.applyNative()
-        buildMenu()
     }
 
     @objc private func toggleLogin() {
         LoginItem.toggle()
-        buildMenu()
     }
 
     func reconfigured() {
         model.refresh()
-        buildMenu()
     }
 }
 
