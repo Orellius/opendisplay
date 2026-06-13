@@ -1,10 +1,9 @@
 // App Intents so the display controls are scriptable from macOS Shortcuts, reusing the
-// same apply paths and UserDefaults keys as the GUI and CLI. NOTE: Shortcuts discovery
-// needs the Metadata.appintents bundle that appintentsmetadataprocessor produces from
-// the compiler's const-value output — a step the SwiftPM build does not run, so these
-// intents only surface in Shortcuts.app under an Xcode/xcodebuild build. Until then the
-// CLI is the scriptable path (wrap `opendisplay ...` in a Run Shell Script action). The
-// code is kept correct and ready so that build just works.
+// same apply paths and UserDefaults keys as the GUI and CLI. Shortcuts discovery needs
+// the Metadata.appintents bundle that appintentsmetadataprocessor builds from the
+// compiler's const-values; scripts/bundle.sh produces and embeds it (it builds via
+// xcodebuild, which emits the const-values a plain `swift build` omits, then runs the
+// processor into Contents/Resources). The CLI is the equivalent path for a raw build.
 // Public surface: the intent structs + OpenDisplayShortcuts (AppShortcutsProvider).
 
 import AppIntents
