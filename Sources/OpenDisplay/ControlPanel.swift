@@ -28,20 +28,24 @@ struct ControlPanel: View {
 
     var body: some View {
         NavigationSplitView {
-            List(selection: $tab) {
-                Section {
-                    ForEach(PanelTab.allCases) { t in
-                        Label(t.rawValue, systemImage: t.icon).tag(t)
+            VStack(spacing: 0) {
+                List(selection: $tab) {
+                    Section {
+                        ForEach(PanelTab.allCases) { t in
+                            Label(t.rawValue, systemImage: t.icon).tag(t)
+                        }
+                    } header: {
+                        HStack(spacing: 8) {
+                            LogoMark().frame(width: 20, height: 20)
+                            Text("OpenDisplay").font(.headline).foregroundStyle(.primary)
+                        }
+                        .padding(.vertical, 6)
                     }
-                } header: {
-                    HStack(spacing: 8) {
-                        LogoMark().frame(width: 20, height: 20)
-                        Text("OpenDisplay").font(.headline).foregroundStyle(.primary)
-                    }
-                    .padding(.vertical, 6)
                 }
+                .listStyle(.sidebar)
+                .frame(maxHeight: .infinity)
+                SidebarFooter()
             }
-            .listStyle(.sidebar)
             .navigationSplitViewColumnWidth(min: 172, ideal: 172, max: 210)
         } detail: {
             Group {
@@ -290,7 +294,7 @@ private struct SettingsDetail: View {
     @ObservedObject var schedule: NightSchedule
     @ObservedObject var idle: IdleDimmer
     @State private var launch = LoginItem.isEnabled
-    @State private var virtualW = 2560
+    @State private var virtualW = (UserDefaults.standard.object(forKey: "virtual.w") as? Int) ?? 2560
     private let virtualPresets = [VirtualRes(w: 1920, h: 1080), VirtualRes(w: 2560, h: 1440),
                                   VirtualRes(w: 3008, h: 1692), VirtualRes(w: 3360, h: 1890)]
     var body: some View {
@@ -472,6 +476,40 @@ private struct InfoRow: View {
     init(_ k: String, _ v: String) { self.k = k; self.v = v }
     var body: some View {
         HStack { Text(k).foregroundStyle(.secondary); Spacer(); Text(v) }
+    }
+}
+
+private struct SidebarFooter: View {
+    private var version: String {
+        (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ?? "1.0"
+    }
+    var body: some View {
+        VStack(spacing: 8) {
+            Divider()
+            HStack(spacing: 6) {
+                LogoMark().frame(width: 13, height: 13)
+                Text("OpenDisplay").font(.caption2).fontWeight(.semibold)
+                Text(version).font(.caption2).foregroundStyle(.secondary)
+            }
+            .padding(.horizontal, 9).padding(.vertical, 4)
+            .background(Capsule().fill(.primary.opacity(0.06)))
+            .overlay(Capsule().strokeBorder(.white.opacity(0.10)))
+            Link(destination: URL(string: "https://github.com/Orellius/opendisplay")!) {
+                HStack(spacing: 4) {
+                    Image(systemName: "chevron.left.forwardslash.chevron.right")
+                    Text("View on GitHub")
+                }
+                .font(.caption2)
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.secondary)
+            Text("Made for the community by\nOrellius (Orel Ohayon)")  // allow-personal: founder attribution footer stamp, requested by Orel
+                .font(.caption2).foregroundStyle(.tertiary)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(.horizontal, 10).padding(.top, 8).padding(.bottom, 12)
+        .frame(maxWidth: .infinity)
     }
 }
 
