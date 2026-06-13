@@ -138,6 +138,7 @@ struct SettingsDetail: View {
                         }
                     }
                     .toggleStyle(.switch).tint(.orange)
+                    .onChange(of: classicOSD) { _, _ in OSD.brightness(model.brightness) }
                 }
                 Card {
                     VStack(alignment: .leading, spacing: 8) {

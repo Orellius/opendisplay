@@ -102,8 +102,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 660, height: 470),
                                   styleMask: [.titled, .closable, .fullSizeContentView], backing: .buffered, defer: false)
             window.titlebarAppearsTransparent = true
-            window.titleVisibility = .hidden   // full-size content draws under the titlebar; the title text would overlap the pane heading
-            window.title = "OpenDisplay"
+            window.titleVisibility = .hidden
+            window.title = ""   // full-size content draws under the titlebar; even hidden, a non-empty title bleeds through over the pane heading
             window.contentViewController = NSHostingController(rootView: ControlPanel(model: model))
             window.center()
             window.isReleasedWhenClosed = false
