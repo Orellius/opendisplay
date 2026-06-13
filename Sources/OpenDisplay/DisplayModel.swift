@@ -7,6 +7,10 @@ import Combine
 final class DisplayModel: ObservableObject {
     @Published private(set) var modes: [DisplayMode] = []
     @Published private(set) var currentLooksW: Int = 0   // 0 means native
+    @Published var brightness: Double = 100              // software dimming, 0...100
+    @Published var hardwareDDC: Bool = false             // also drive DDC when set
+
+    var hardwareAvailable: Bool { Brightness.hardwareAvailable }
 
     let displayID: CGDirectDisplayID
     private let nativeMode: CGDisplayMode?
@@ -17,9 +21,21 @@ final class DisplayModel: ObservableObject {
         refresh()
         let saved = UserDefaults.standard.integer(forKey: Self.key(displayID))
         if saved > 0 { apply(looksW: saved) }
+
+        let savedB = UserDefaults.standard.object(forKey: Self.brightKey(displayID)) as? Double
+        brightness = savedB ?? 100
+        Brightness.setSoftware(brightness / 100.0, on: displayID)
     }
 
     private static func key(_ id: CGDirectDisplayID) -> String { "looksW.\(id)" }
+    private static func brightKey(_ id: CGDirectDisplayID) -> String { "brightness.\(id)" }
+
+    func setBrightness(_ value: Double) {
+        brightness = value
+        Brightness.setSoftware(value / 100.0, on: displayID)
+        if hardwareDDC { Brightness.setHardware(Int(value)) }
+        UserDefaults.standard.set(value, forKey: Self.brightKey(displayID))
+    }
 
     func refresh() {
         modes = SkyLight.hidpiModes(for: displayID)

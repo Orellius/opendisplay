@@ -18,6 +18,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         CGDisplayRegisterReconfigurationCallback(displayReconfig, Unmanaged.passUnretained(self).toOpaque())
     }
 
+    func applicationWillTerminate(_ note: Notification) {
+        Brightness.restore()   // don't leave the panel dimmed after quit
+    }
+
     func buildMenu() {
         let menu = NSMenu()
         let open = NSMenuItem(title: "Open OpenDisplay…", action: #selector(openPanel), keyEquivalent: "o")
@@ -50,8 +54,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func openPanel() {
         if panel == nil {
-            let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 380, height: 480),
-                                  styleMask: [.titled, .closable], backing: .buffered, defer: false)
+            let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 660, height: 470),
+                                  styleMask: [.titled, .closable, .fullSizeContentView], backing: .buffered, defer: false)
+            window.titlebarAppearsTransparent = true
             window.title = "OpenDisplay"
             window.contentViewController = NSHostingController(rootView: ControlPanel(model: model))
             window.center()
@@ -92,6 +97,16 @@ private func displayReconfig(_ display: CGDirectDisplayID,
     if flags.contains(.addFlag) || flags.contains(.removeFlag) || flags.contains(.enabledFlag) {
         DispatchQueue.main.async { delegate.reconfigured() }
     }
+}
+
+// Dev path: `OpenDisplay ddc-test [0-100]` exercises the DDC brightness write and exits.
+if CommandLine.arguments.count >= 2, CommandLine.arguments[1] == "ddc-test" {
+    let value = CommandLine.arguments.count >= 3 ? (Int(CommandLine.arguments[2]) ?? 50) : 50
+    print("DDC available: \(DDC.available)")
+    print("current brightness: \(DDC.brightness().map(String.init) ?? "unreadable")")
+    print("set brightness \(value): \(DDC.setBrightness(value))")
+    print("brightness after: \(DDC.brightness().map(String.init) ?? "unreadable")")
+    exit(0)
 }
 
 let app = NSApplication.shared
