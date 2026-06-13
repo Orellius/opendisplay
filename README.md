@@ -10,10 +10,16 @@ On Apple Silicon, macOS only offers HiDPI ("Retina") scaling on 4K and 5K panels
 
 ## Features
 
-- Lists the HiDPI modes your display actually supports, not just the ones System Settings shows.
-- Apply one from the menubar or the control-panel window; it takes effect immediately.
-- Remembers your choice and reapplies it when the display reconnects.
-- Around 350 lines of Swift, no dependencies, no kernel extension.
+- HiDPI resolutions macOS hides on sub-4K panels, from the menu bar, the control panel, or a scrub slider. Takes effect immediately and is reapplied when the display reconnects.
+- Software brightness and color warmth as a live gamma transfer, restored on quit.
+- Refresh-rate switching, in both HiDPI and native modes.
+- Display rotation when the panel supports it, via the private MonitorPanel API.
+- A headless HiDPI virtual display for remote access when no panel is attached.
+- Global hotkeys for brightness and warmth, with a glass on-screen display.
+- Favorite resolutions pinned to the menu bar.
+- A Display pane that reads panel identity and geometry (name, serial, PPI, EDID UUID) with copy and export.
+- An `opendisplay` command line for scripting, plus App Intents for Shortcuts.
+- Launch at login. No dependencies, no kernel extension.
 
 ## Install
 
@@ -26,6 +32,29 @@ open OpenDisplay.app
 ```
 
 To run from source during development: `swift run`.
+
+## Command line
+
+The app binary doubles as a CLI. Symlink it onto your PATH:
+
+```sh
+ln -s "$PWD/OpenDisplay.app/Contents/MacOS/OpenDisplay" /usr/local/bin/opendisplay
+opendisplay help
+```
+
+```
+opendisplay list                hidden HiDPI modes (* = current)
+opendisplay res 1920            set a HiDPI mode by looks-like width
+opendisplay native              return to the native mode
+opendisplay brightness 60       software brightness 0-100
+opendisplay warmth 30           color warmth 0-100
+opendisplay refresh 120         refresh rate at the current resolution
+opendisplay rotate 90           rotate the display
+opendisplay virtual 2560        create a headless HiDPI display and hold it
+opendisplay info                panel identity and geometry
+```
+
+Wrap any of these in a Shortcuts "Run Shell Script" action to drive the display from Shortcuts.
 
 ## How it works
 
@@ -41,11 +70,9 @@ Built and verified on macOS 26 (Apple Silicon). Distributed outside the Mac App 
 
 A HiDPI mode renders at 2x and downsamples to the panel's physical pixels. Text and edges get sharper; the physical pixel count does not change. A 27-inch 1440p panel is about 109 PPI, while a Retina-class panel is about 218. The improvement is most visible on scaled-down resolutions, where the workspace is larger and rendered at 2x. True Retina density requires a higher-PPI display.
 
-## Roadmap
+## Scope
 
-- Per-display selection for multi-monitor setups.
-- Launch at login.
-- Under consideration: brightness over DDC, mirroring, virtual displays.
+Tuned for a single external sub-4K display on Apple Silicon. Multi-monitor layout, DDC hardware control, and HDR boost are out of scope by design.
 
 ## License
 

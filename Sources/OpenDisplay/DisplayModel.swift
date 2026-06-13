@@ -88,7 +88,17 @@ final class DisplayModel: ObservableObject {
         }
         currentLooksW = cur.pixelWidth > cur.width ? cur.width : 0
         currentHz = cur.refreshRate
-        refreshRates = currentLooksW > 0 ? SkyLight.refreshRates(for: displayID, looksW: currentLooksW) : []
+        refreshRates = currentLooksW > 0 ? SkyLight.refreshRates(for: displayID, looksW: currentLooksW)
+                                         : nativeRefreshRates(cur.width)
+    }
+
+    // 1x modes at the native width carry their own set of refresh rates, so the picker
+    // works in native mode too (not only for HiDPI modes).
+    private func nativeRefreshRates(_ width: Int) -> [Double] {
+        let opts = [kCGDisplayShowDuplicateLowResolutionModes as String: true] as CFDictionary
+        guard let modes = CGDisplayCopyAllDisplayModes(displayID, opts) as? [CGDisplayMode] else { return [] }
+        let rates = modes.filter { $0.width == width && $0.pixelWidth == $0.width }.map { Int($0.refreshRate.rounded()) }
+        return Set(rates).map(Double.init).sorted(by: >)
     }
 
     func apply(looksW: Int) {
@@ -104,8 +114,20 @@ final class DisplayModel: ObservableObject {
     }
 
     func setRefresh(_ hz: Double) {
-        guard currentLooksW > 0 else { return }
-        if SkyLight.applyHiDPI(looksW: currentLooksW, hz: hz, to: displayID) { detectCurrent() }
+        if currentLooksW > 0 {
+            if SkyLight.applyHiDPI(looksW: currentLooksW, hz: hz, to: displayID) { detectCurrent() }
+        } else {
+            applyNativeRefresh(hz)
+        }
+    }
+
+    private func applyNativeRefresh(_ hz: Double) {
+        guard let cur = CGDisplayCopyDisplayMode(displayID) else { return }
+        let opts = [kCGDisplayShowDuplicateLowResolutionModes as String: true] as CFDictionary
+        guard let modes = CGDisplayCopyAllDisplayModes(displayID, opts) as? [CGDisplayMode],
+              let target = modes.filter({ $0.width == cur.width && $0.pixelWidth == $0.width })
+                  .min(by: { abs($0.refreshRate - hz) < abs($1.refreshRate - hz) }) else { return }
+        if SkyLight.setMode(target, on: displayID) { detectCurrent() }
     }
 
     func rotate(to degrees: Int) {
