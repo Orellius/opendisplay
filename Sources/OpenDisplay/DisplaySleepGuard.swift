@@ -24,6 +24,9 @@ final class DisplaySleepGuard: ObservableObject {
 
     deinit { release() }
 
+    // Re-read after a settings import; the didSet re-applies the assertion.
+    func reload() { enabled = UserDefaults.standard.bool(forKey: "preventSleep.enabled") }
+
     private func persist() {
         guard ready else { return }
         UserDefaults.standard.set(enabled, forKey: "preventSleep.enabled")

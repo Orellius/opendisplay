@@ -4,7 +4,9 @@
 // small resolution-preset model for the virtual-display picker, co-located here as its
 // only consumer. NOT responsible for: the schedule/idle timers themselves.
 
+import AppKit
 import SwiftUI
+import UniformTypeIdentifiers
 
 private struct VirtualRes: Identifiable, Hashable {
     let w: Int; let h: Int
@@ -127,6 +129,16 @@ struct SettingsDetail: View {
                     }
                 }
                 Card {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Settings file").font(.caption).foregroundStyle(.secondary)
+                        HStack(spacing: 10) {
+                            Button { exportSettings() } label: { Label("Export…", systemImage: "square.and.arrow.up") }
+                            Button { importSettings() } label: { Label("Import…", systemImage: "square.and.arrow.down") }
+                        }
+                        .buttonStyle(.bordered)
+                    }
+                }
+                Card {
                     InfoRow("OpenDisplay", "v1.0")
                 }
                 Text("HiDPI renders at 2× and downsamples to the panel. Sharper, not denser.")
@@ -134,5 +146,24 @@ struct SettingsDetail: View {
             }
             .padding(20)
         }
+    }
+
+    private func exportSettings() {
+        let panel = NSSavePanel()
+        panel.nameFieldStringValue = "OpenDisplay-settings.json"
+        panel.allowedContentTypes = [.json]
+        guard panel.runModal() == .OK, let url = panel.url,
+              let data = try? SettingsPortability.exportData() else { return }
+        try? data.write(to: url)
+    }
+
+    private func importSettings() {
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = [.json]
+        panel.allowsMultipleSelection = false
+        guard panel.runModal() == .OK, let url = panel.url,
+              let data = try? Data(contentsOf: url) else { return }
+        SettingsPortability.importData(data)
+        model.reloadFromDefaults()
     }
 }

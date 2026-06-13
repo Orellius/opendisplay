@@ -31,6 +31,17 @@ final class IdleDimmer: ObservableObject {
 
     deinit { timer?.invalidate() }
 
+    // Re-read after a settings import; ready=false suppresses the per-field persist.
+    func reload() {
+        let d = UserDefaults.standard
+        ready = false
+        enabled = d.bool(forKey: "idle.enabled")
+        minutes = d.object(forKey: "idle.minutes") as? Int ?? 3
+        level = d.object(forKey: "idle.level") as? Double ?? 0.7
+        ready = true
+        reschedule()
+    }
+
     private func persist() {
         guard ready else { return }
         let d = UserDefaults.standard

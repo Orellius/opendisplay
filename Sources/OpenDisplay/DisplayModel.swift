@@ -141,6 +141,29 @@ final class DisplayModel: ObservableObject {
         OSD.brightness(p.brightness)
     }
 
+    // Re-read every persisted value (after a settings import) and apply it live.
+    func reloadFromDefaults() {
+        let d = UserDefaults.standard
+        brightness = (d.object(forKey: Self.brightKey(displayID)) as? Double) ?? 100
+        warmth = (d.object(forKey: Self.warmthKey(displayID)) as? Double) ?? 0
+        contrast = (d.object(forKey: Self.contrastKey(displayID)) as? Double) ?? 50
+        displayName = d.string(forKey: Self.nameKey(displayID)) ?? ""
+        favorites = Set((d.array(forKey: Self.favKey(displayID)) as? [Int]) ?? [])
+        hardwareDDC = d.bool(forKey: Self.ddcKey(displayID))
+        protectConfig = d.bool(forKey: Self.protectKey(displayID))
+        presets = (0 ..< 3).map { i in
+            guard d.bool(forKey: "preset.\(i).set") else { return nil }
+            return TonePreset(brightness: d.double(forKey: "preset.\(i).b"),
+                              warmth: d.double(forKey: "preset.\(i).w"))
+        }
+        let savedLooks = d.integer(forKey: Self.key(displayID))
+        if savedLooks > 0 { apply(looksW: savedLooks) } else { applyNative() }
+        applyTone()
+        schedule.reload()
+        idle.reload()
+        sleepGuard.reload()
+    }
+
     func isFavorite(_ looksW: Int) -> Bool { favorites.contains(looksW) }
 
     func toggleFavorite(_ looksW: Int) {

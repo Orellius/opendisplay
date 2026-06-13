@@ -38,6 +38,19 @@ final class NightSchedule: ObservableObject {
 
     deinit { timer?.invalidate() }
 
+    // Re-read after a settings import; ready=false suppresses the per-field persist.
+    func reload() {
+        let d = UserDefaults.standard
+        ready = false
+        enabled = d.bool(forKey: "schedule.enabled")
+        startHour = d.object(forKey: "schedule.startHour") as? Int ?? 20
+        endHour = d.object(forKey: "schedule.endHour") as? Int ?? 7
+        nightWarmth = d.object(forKey: "schedule.nightWarmth") as? Double ?? 55
+        nightBrightness = d.object(forKey: "schedule.nightBrightness") as? Double ?? 85
+        ready = true
+        reschedule()
+    }
+
     private func persist() {
         guard ready else { return }
         let d = UserDefaults.standard
