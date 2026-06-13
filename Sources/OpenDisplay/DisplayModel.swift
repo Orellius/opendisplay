@@ -37,9 +37,9 @@ final class DisplayModel: ObservableObject {
         applyTone()
     }
 
-    private static func key(_ id: CGDirectDisplayID) -> String { "looksW.\(id)" }
-    private static func brightKey(_ id: CGDirectDisplayID) -> String { "brightness.\(id)" }
-    private static func warmthKey(_ id: CGDirectDisplayID) -> String { "warmth.\(id)" }
+    static func key(_ id: CGDirectDisplayID) -> String { "looksW.\(id)" }
+    static func brightKey(_ id: CGDirectDisplayID) -> String { "brightness.\(id)" }
+    static func warmthKey(_ id: CGDirectDisplayID) -> String { "warmth.\(id)" }
     private static func favKey(_ id: CGDirectDisplayID) -> String { "favorites.\(id)" }
 
     func isFavorite(_ looksW: Int) -> Bool { favorites.contains(looksW) }

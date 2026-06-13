@@ -114,6 +114,9 @@ private func displayReconfig(_ display: CGDirectDisplayID,
     }
 }
 
+// CLI subcommands apply and exit (or, for `virtual`, hold). No subcommand -> GUI.
+_ = CLI.run(CommandLine.arguments)
+
 // Dev path: `OpenDisplay ddc-test [0-100]` exercises the DDC brightness write and exits.
 if CommandLine.arguments.count >= 2, CommandLine.arguments[1] == "ddc-test" {
     let value = CommandLine.arguments.count >= 3 ? (Int(CommandLine.arguments[2]) ?? 50) : 50
