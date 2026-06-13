@@ -25,6 +25,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         model.restoreVirtualIfNeeded()
     }
 
+    func application(_ application: NSApplication, open urls: [URL]) {
+        for url in urls { URLScheme.handle(url, model: model) }
+    }
+
     @objc private func didWake() {
         // The display takes a moment to settle after wake before it accepts a reapply.
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in self?.model.reapply() }

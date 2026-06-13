@@ -59,6 +59,13 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
   <key>CFBundleShortVersionString</key><string>1.0</string>
   <key>LSUIElement</key><true/>
   <key>LSMinimumSystemVersion</key><string>14.0</string>
+  <key>CFBundleURLTypes</key>
+  <array>
+    <dict>
+      <key>CFBundleURLName</key><string>com.orellius.opendisplay</string>
+      <key>CFBundleURLSchemes</key><array><string>opendisplay</string></array>
+    </dict>
+  </array>
 </dict></plist>
 PLIST
 
