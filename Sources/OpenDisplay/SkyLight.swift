@@ -74,6 +74,36 @@ enum SkyLight {
         return setMode(unsafeBitCast(mode, to: CGDisplayMode.self), on: id)
     }
 
+    /// Distinct refresh rates available for the HiDPI mode at the given looks-like width, descending.
+    static func refreshRates(for id: CGDirectDisplayID, looksW: Int) -> [Double] {
+        guard let copyModes, let pxW, let lw, let hz,
+              let arr = copyModes(id, opts)?.takeRetainedValue() else { return [] }
+        var seen = Set<Int>()
+        for i in 0 ..< CFArrayGetCount(arr) {
+            guard let m = CFArrayGetValueAtIndex(arr, i) else { continue }
+            if lw(m) == looksW, pxW(m) == 2 * looksW { seen.insert(Int(hz(m).rounded())) }
+        }
+        return seen.map(Double.init).sorted(by: >)
+    }
+
+    /// Apply the HiDPI mode at the given looks-like width whose refresh is closest to `target`.
+    @discardableResult
+    static func applyHiDPI(looksW: Int, hz target: Double, to id: CGDirectDisplayID) -> Bool {
+        guard let copyModes, let pxW, let lw, let hz,
+              let arr = copyModes(id, opts)?.takeRetainedValue() else { return false }
+        var chosen: UnsafeRawPointer?
+        var bestDelta = Double.greatestFiniteMagnitude
+        for i in 0 ..< CFArrayGetCount(arr) {
+            guard let m = CFArrayGetValueAtIndex(arr, i) else { continue }
+            if lw(m) == looksW, pxW(m) == 2 * looksW {
+                let d = abs(hz(m) - target)
+                if d < bestDelta { bestDelta = d; chosen = m }
+            }
+        }
+        guard let mode = chosen else { return false }
+        return setMode(unsafeBitCast(mode, to: CGDisplayMode.self), on: id)
+    }
+
     static func setMode(_ mode: CGDisplayMode, on id: CGDirectDisplayID) -> Bool {
         var cfg: CGDisplayConfigRef?
         guard CGBeginDisplayConfiguration(&cfg) == .success else { return false }

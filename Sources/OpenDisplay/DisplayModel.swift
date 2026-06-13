@@ -7,6 +7,8 @@ import Combine
 final class DisplayModel: ObservableObject {
     @Published private(set) var modes: [DisplayMode] = []
     @Published private(set) var currentLooksW: Int = 0   // 0 means native
+    @Published private(set) var currentHz: Double = 0
+    @Published private(set) var refreshRates: [Double] = []
     @Published var brightness: Double = 100              // software dimming, 0...100
     @Published var hardwareDDC: Bool = false             // also drive DDC when set
 
@@ -43,19 +45,28 @@ final class DisplayModel: ObservableObject {
     }
 
     private func detectCurrent() {
-        guard let cur = CGDisplayCopyDisplayMode(displayID) else { currentLooksW = 0; return }
+        guard let cur = CGDisplayCopyDisplayMode(displayID) else {
+            currentLooksW = 0; currentHz = 0; refreshRates = []; return
+        }
         currentLooksW = cur.pixelWidth > cur.width ? cur.width : 0
+        currentHz = cur.refreshRate
+        refreshRates = currentLooksW > 0 ? SkyLight.refreshRates(for: displayID, looksW: currentLooksW) : []
     }
 
     func apply(looksW: Int) {
         guard SkyLight.applyHiDPI(looksW: looksW, to: displayID) else { return }
-        currentLooksW = looksW
         UserDefaults.standard.set(looksW, forKey: Self.key(displayID))
+        detectCurrent()
     }
 
     func applyNative() {
         guard let nativeMode, SkyLight.setMode(nativeMode, on: displayID) else { return }
-        currentLooksW = 0
         UserDefaults.standard.set(0, forKey: Self.key(displayID))
+        detectCurrent()
+    }
+
+    func setRefresh(_ hz: Double) {
+        guard currentLooksW > 0 else { return }
+        if SkyLight.applyHiDPI(looksW: currentLooksW, hz: hz, to: displayID) { detectCurrent() }
     }
 }

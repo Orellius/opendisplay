@@ -74,6 +74,19 @@ private struct ResolutionDetail: View {
                     ResRowPlain(title: "Native (no HiDPI)", sub: "2560 × 1440", active: model.currentLooksW == 0) {
                         model.applyNative()
                     }
+                    if !model.refreshRates.isEmpty {
+                        HStack { Text("Refresh rate").font(.caption).foregroundStyle(.secondary); Spacer() }
+                            .padding(.top, 12).padding(.horizontal, 12)
+                        Picker("", selection: Binding(get: { Int(model.currentHz.rounded()) },
+                                                      set: { model.setRefresh(Double($0)) })) {
+                            ForEach(model.refreshRates, id: \.self) { hz in
+                                Text("\(Int(hz)) Hz").tag(Int(hz))
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                        .labelsHidden()
+                        .padding(.horizontal, 12)
+                    }
                 }
             }
             .padding(20)
