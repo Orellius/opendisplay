@@ -54,6 +54,16 @@ struct SettingsDetail: View {
                     }
                 }
                 Card {
+                    Toggle(isOn: $model.protectConfig) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Protect resolution")
+                            Text("Put the chosen resolution back if an app or macOS changes it")
+                                .font(.caption).foregroundStyle(.secondary)
+                        }
+                    }
+                    .toggleStyle(.switch).tint(.orange)
+                }
+                Card {
                     VStack(alignment: .leading, spacing: 10) {
                         Toggle(isOn: $schedule.enabled) {
                             VStack(alignment: .leading, spacing: 2) {

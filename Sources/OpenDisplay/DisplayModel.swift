@@ -18,6 +18,9 @@ final class DisplayModel: ObservableObject {
     @Published var hardwareDDC: Bool = false {           // also drive DDC when set
         didSet { UserDefaults.standard.set(hardwareDDC, forKey: Self.ddcKey(displayID)) }
     }
+    @Published var protectConfig: Bool = false {         // re-assert saved resolution on drift
+        didSet { UserDefaults.standard.set(protectConfig, forKey: Self.protectKey(displayID)) }
+    }
     @Published private(set) var favorites: Set<Int> = [] // starred looks-like widths
     @Published private(set) var virtualActive = false    // headless virtual display on
     @Published private(set) var presets: [TonePreset?] = [nil, nil, nil]
@@ -70,6 +73,7 @@ final class DisplayModel: ObservableObject {
         displayName = UserDefaults.standard.string(forKey: Self.nameKey(displayID)) ?? ""
         favorites = Set((UserDefaults.standard.array(forKey: Self.favKey(displayID)) as? [Int]) ?? [])
         hardwareDDC = UserDefaults.standard.bool(forKey: Self.ddcKey(displayID))
+        protectConfig = UserDefaults.standard.bool(forKey: Self.protectKey(displayID))
         presets = (0 ..< 3).map { i in
             guard UserDefaults.standard.bool(forKey: "preset.\(i).set") else { return nil }
             return TonePreset(brightness: UserDefaults.standard.double(forKey: "preset.\(i).b"),
@@ -108,6 +112,18 @@ final class DisplayModel: ObservableObject {
                                   forKey: Self.nameKey(displayID))
     }
     private static func ddcKey(_ id: CGDirectDisplayID) -> String { "hardwareDDC.\(id)" }
+    private static func protectKey(_ id: CGDirectDisplayID) -> String { "protectConfig.\(id)" }
+
+    // BetterDisplay's "configuration protection": if something changed the resolution out
+    // from under us (a game, an app, a macOS reshuffle), put the saved one back. Re-applies
+    // only on real drift, so re-asserting (which itself fires a reconfig) settles in one pass.
+    func reassertIfProtected() {
+        guard protectConfig else { return }
+        let saved = UserDefaults.standard.integer(forKey: Self.key(displayID))
+        detectCurrent()
+        guard saved != currentLooksW else { return }
+        if saved > 0 { apply(looksW: saved) } else { applyNative() }
+    }
 
     // BetterDisplay #1976: save the current brightness+warmth to a slot, recall it later.
     func savePreset(_ i: Int) {

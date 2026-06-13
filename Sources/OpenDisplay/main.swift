@@ -128,6 +128,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     func reconfigured() {
         model.refresh()
     }
+
+    func modeChanged() {
+        model.reassertIfProtected()
+    }
 }
 
 private func displayReconfig(_ display: CGDirectDisplayID,
@@ -137,6 +141,8 @@ private func displayReconfig(_ display: CGDirectDisplayID,
     let delegate = Unmanaged<AppDelegate>.fromOpaque(ctx).takeUnretainedValue()
     if flags.contains(.addFlag) || flags.contains(.removeFlag) || flags.contains(.enabledFlag) {
         DispatchQueue.main.async { delegate.reconfigured() }
+    } else if flags.contains(.setModeFlag) {
+        DispatchQueue.main.async { delegate.modeChanged() }
     }
 }
 
