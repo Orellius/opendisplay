@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright © 2026 Orellius — https://github.com/Orellius/opendisplay
 // Idle dimming for the external panel - BetterDisplay #3966 / #2161. macOS dims the
 // built-in display before lock but leaves third-party externals at full brightness;
 // this dims after a configurable idle and restores on the next input. It drives a

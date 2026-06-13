@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright © 2026 Orellius — https://github.com/Orellius/opendisplay
 // The control panel shell: a fixed two-pane layout - a category sidebar beside a glass
 // detail pane. Each category routes to its own detail view (ResolutionDetail/
 // BrightnessDetail/DisplayDetail/SettingsDetail), all in sibling files; the shared pane
@@ -122,7 +124,7 @@ private struct SidebarFooter: View {
             }
             .buttonStyle(.plain)
             .foregroundStyle(.secondary)
-            Text("Made for the community by\nOrellius (Orel Ohayon)")  // allow-personal: founder attribution footer stamp, requested by Orel
+            Text("Made for the community by\n\(Attribution.author)")  // allow-personal: rendered from the single Attribution source
                 .font(.caption2).foregroundStyle(.tertiary)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright © 2026 Orellius — https://github.com/Orellius/opendisplay
 // The Display detail pane: panel identity (name, manufacturer, serial, manufacture
 // date) and geometry (native/current resolution, panel size, PPI, EDID UUID), with
 // copy-to-clipboard and text export. Reads a DisplayInfo snapshot on appear.

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright © 2026 Orellius — https://github.com/Orellius/opendisplay
 // Brightness control. Software dimming scales the display's gamma transfer and
 // is visible on any panel (it darkens the rendered output). Hardware DDC is
 // offered as an opt-in, since some panels acknowledge DDC writes but ignore them.

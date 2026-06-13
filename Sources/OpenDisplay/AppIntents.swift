@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright © 2026 Orellius — https://github.com/Orellius/opendisplay
 // App Intents so the display controls are scriptable from macOS Shortcuts, reusing the
 // same apply paths and UserDefaults keys as the GUI and CLI. Shortcuts discovery needs
 // the Metadata.appintents bundle that appintentsmetadataprocessor builds from the

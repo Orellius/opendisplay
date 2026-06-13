@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright © 2026 Orellius — https://github.com/Orellius/opendisplay
 // Handles the opendisplay:// URL scheme so the display can be driven from links,
 // Shortcuts' "Open URL", Raycast, Alfred, etc. - the GUI counterpart to the CLI. The
 // form is opendisplay://<action>[/<value>], e.g. opendisplay://brightness/50. Routes

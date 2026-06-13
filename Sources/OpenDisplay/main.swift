@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright © 2026 Orellius — https://github.com/Orellius/opendisplay
 // Entry point: a menubar agent (no dock icon). The status item offers a quick
 // resolution pick and opens the SwiftUI control panel. Re-applies the saved
 // choice when a display is connected or reconfigured.
@@ -150,6 +152,29 @@ private func displayReconfig(_ display: CGDirectDisplayID,
         DispatchQueue.main.async { delegate.modeChanged() }
     }
 }
+
+// The project's single copyright/attribution notice and a launch-time guard. OpenDisplay
+// is AGPL-3.0: forks must stay open and must preserve this attribution (AGPL section 7 /
+// section 5(d) Appropriate Legal Notices). enforce() refuses to start if the notice has
+// been stripped, so a copy that removes the credit will not run. The UI footer renders
+// `author`, so the visible credit and the guarded constant are one source of truth. This
+// is a deterrent coupled to the license, not protection against patching the binary.
+enum Attribution {
+    static let author = "Orellius (Orel Ohayon)"  // allow-personal: the protected license attribution
+    static let line = "OpenDisplay © 2026 \(author) · AGPL-3.0"
+    static let url = "https://github.com/Orellius/opendisplay"
+
+    static func enforce() {
+        guard line.contains("Orellius"), line.contains("AGPL"), line.contains("OpenDisplay") else {
+            FileHandle.standardError.write(Data(
+                "OpenDisplay: the copyright notice has been removed. This violates the AGPL-3.0 license; the app will not run. See \(url)\n".utf8))
+            exit(70)
+        }
+    }
+}
+
+// Refuse to run a copy whose attribution has been stripped (before any other work).
+Attribution.enforce()
 
 // CLI subcommands apply and exit (or, for `virtual`, hold). No subcommand -> GUI.
 _ = CLI.run(CommandLine.arguments)

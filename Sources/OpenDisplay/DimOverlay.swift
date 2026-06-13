@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright © 2026 Orellius — https://github.com/Orellius/opendisplay
 // A reusable translucent black overlay window for darkening the screen below what the
 // gamma transfer alone can reach (its floor is 25% luminance). Both the idle dimmer
 // and the brightness control's deep-dim range drive their own instance of this. The

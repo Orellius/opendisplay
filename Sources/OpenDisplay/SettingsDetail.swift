@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright © 2026 Orellius — https://github.com/Orellius/opendisplay
 // The Settings detail pane: launch-at-login, the headless virtual display, the night
 // schedule, and idle dimming, plus a version row. Most controls bind straight to the
 // relevant observable (NightSchedule/IdleDimmer) or DisplayModel. VirtualRes is the

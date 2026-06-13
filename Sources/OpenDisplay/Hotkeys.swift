@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright © 2026 Orellius — https://github.com/Orellius/opendisplay
 // Global hotkeys via Carbon RegisterEventHotKey. Carbon hot keys fire system-wide
 // without the Accessibility permission a CGEventTap would need, which is why a
 // menubar agent uses them for brightness/warmth nudges that work with the panel

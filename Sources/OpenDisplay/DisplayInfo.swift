@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright © 2026 Orellius — https://github.com/Orellius/opendisplay
 // Reads panel identity and geometry for the Display info pane and its text export.
 // The product name comes from the private CoreDisplay info dictionary (the same
 // source System Information uses); manufacture/serial details and the EDID UUID come

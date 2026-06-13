@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright © 2026 Orellius — https://github.com/Orellius/opendisplay
 // Shared building blocks for the control-panel detail panes: a section title, a
 // glass card container, and a key/value row. Hoisted here once a second pane needed
 // them (Resolution/Brightness/Display/Settings all use PaneTitle; the latter three

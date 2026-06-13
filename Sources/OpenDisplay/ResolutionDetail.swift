@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright © 2026 Orellius — https://github.com/Orellius/opendisplay
 // The Resolution detail pane: a scrub slider over the hidden HiDPI modes, a list of
 // those modes (each star-pinnable to the menu bar), a native fallback, and refresh /
 // rotation pickers when the panel supports them. Reads everything from DisplayModel

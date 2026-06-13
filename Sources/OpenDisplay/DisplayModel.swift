@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright © 2026 Orellius — https://github.com/Orellius/opendisplay
 // Observable state for one display: its available HiDPI modes, the active choice,
 // and persistence. Restores the saved choice on launch and on display reconnect.
 

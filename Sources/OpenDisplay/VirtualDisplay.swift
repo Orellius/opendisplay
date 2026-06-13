@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright © 2026 Orellius — https://github.com/Orellius/opendisplay
 // A single headless HiDPI virtual display via the private CGVirtualDisplay API.
 // The point is remote access: when the always-on Mac runs with no panel attached
 // (or you want a second crisp surface to VNC into), this creates a display that

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright © 2026 Orellius — https://github.com/Orellius/opendisplay
 // Scriptable control surface: `opendisplay <command>`. Stateless commands apply and
 // exit; `virtual` holds the process so a headless box (over SSH/Tailscale) can run it
 // as a daemon. Shares the GUI's UserDefaults keys so a CLI change and the panel agree.

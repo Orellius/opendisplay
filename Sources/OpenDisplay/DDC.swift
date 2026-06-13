@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright © 2026 Orellius — https://github.com/Orellius/opendisplay
 // DDC/CI brightness over the Apple Silicon I2C path. The IOAVService private
 // IOKit symbols have no public headers, so they are resolved with dlsym (same
 // pattern as SkyLight). Targets the single external display: find the

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright © 2026 Orellius — https://github.com/Orellius/opendisplay
 // Time-based warmth and dimming - BetterDisplay's most-requested unshipped feature
 // (#2678, #758), where the maintainer keeps telling users to script it with the CLI.
 // Honest version of Night Shift: a minute timer interpolates brightness and warmth

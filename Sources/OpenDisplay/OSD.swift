@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright © 2026 Orellius — https://github.com/Orellius/opendisplay
 // A glass on-screen display, shown when brightness/warmth/resolution change from a
 // hotkey or the menu bar - the cases where the panel is closed and there is otherwise
 // no feedback. A borderless click-through window floats above everything at bottom

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright © 2026 Orellius — https://github.com/Orellius/opendisplay
 // Private SkyLight bridge. macOS hides a display's HiDPI modes from the public
 // CGDisplayCopyAllDisplayModes; the private SLDisplayCopyAllDisplayModes (with the
 // ShowDuplicateLowResolutionModes option) exposes them, and the public

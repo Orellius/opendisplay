@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright © 2026 Orellius — https://github.com/Orellius/opendisplay
 // Holds an IOPMAssertion that keeps the display awake while OpenDisplay runs, so a
 // desk monitor (or a headless box you VNC into) doesn't idle-sleep - BetterDisplay's
 // "prevent display sleep". macOS reference-counts these assertions, so this holds

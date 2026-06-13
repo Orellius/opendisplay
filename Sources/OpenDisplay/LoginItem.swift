@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright © 2026 Orellius — https://github.com/Orellius/opendisplay
 // Launch-at-login via SMAppService (macOS 13+). Registers the bundled .app as a
 // login item; the system relaunches it at boot.
 

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright © 2026 Orellius — https://github.com/Orellius/opendisplay
 // Export every OpenDisplay UserDefaults key to a JSON file and import them back, so a
 // setup can be moved between machines or kept as a backup - BetterDisplay's settings
 // export/import. Filters to the app's own key prefixes (never system globals), and uses

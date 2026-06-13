@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright © 2026 Orellius — https://github.com/Orellius/opendisplay
 // The Brightness & Color detail pane: software brightness and warmth sliders, the
 // three tone presets, and the optional DDC hardware toggle. All values drive the
 // gamma path through DisplayModel. NOT responsible for: the gamma math (Brightness).

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright © 2026 Orellius — https://github.com/Orellius/opendisplay
 // Display rotation, thin Swift over the MPBridge ObjC shim. On Apple Silicon the
 // Intel-era IOFramebuffer transform path is dead (the framebuffer is DCP-managed)
 // and the CGX rotation symbols are WindowServer-internal; the working route is
