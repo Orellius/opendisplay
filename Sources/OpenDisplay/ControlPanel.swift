@@ -1,8 +1,10 @@
-// The control panel shell: a sidebar of categories with a glass detail pane. Each
-// category routes to its own detail view (ResolutionDetail/BrightnessDetail/
-// DisplayDetail/SettingsDetail), all in sibling files; the shared pane primitives live
-// in PaneComponents. This file owns only the split-view chrome, the sidebar footer,
-// and the logo mark. NOT responsible for: any pane's contents.
+// The control panel shell: a fixed two-pane layout - a category sidebar beside a glass
+// detail pane. Each category routes to its own detail view (ResolutionDetail/
+// BrightnessDetail/DisplayDetail/SettingsDetail), all in sibling files; the shared pane
+// primitives live in PaneComponents. A plain HStack rather than NavigationSplitView on
+// purpose: hosted in a manually-built NSWindow, the split view's collapse animation
+// crashes in NSView layout, and its sidebar gets no titlebar inset. NOT responsible
+// for: any pane's contents.
 
 import AppKit
 import SwiftUI
@@ -25,44 +27,75 @@ enum PanelTab: String, CaseIterable, Identifiable {
 
 struct ControlPanel: View {
     @ObservedObject var model: DisplayModel
-    @State private var tab: PanelTab? = .resolution
+    @State private var tab: PanelTab = .resolution
 
     var body: some View {
-        NavigationSplitView {
-            VStack(spacing: 0) {
-                List(selection: $tab) {
-                    Section {
-                        ForEach(PanelTab.allCases) { t in
-                            Label(t.rawValue, systemImage: t.icon).tag(t)
-                        }
-                    } header: {
-                        HStack(spacing: 8) {
-                            LogoMark().frame(width: 20, height: 20)
-                            Text("OpenDisplay").font(.headline).foregroundStyle(.primary)
-                        }
-                        .padding(.vertical, 6)
-                    }
-                }
-                .listStyle(.sidebar)
-                .frame(maxHeight: .infinity)
-                SidebarFooter()
-            }
-            .navigationSplitViewColumnWidth(min: 172, ideal: 172, max: 210)
-        } detail: {
-            Group {
-                switch tab ?? .resolution {
-                case .resolution: ResolutionDetail(model: model)
-                case .brightness: BrightnessDetail(model: model)
-                case .display: DisplayDetail(model: model)
-                case .settings: SettingsDetail(model: model, schedule: model.schedule,
-                                               idle: model.idle, sleep: model.sleepGuard)
-                }
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            .background(.regularMaterial)
+        HStack(spacing: 0) {
+            sidebar
+            Divider()
+            detail
         }
         .frame(width: 660, height: 470)
     }
+
+    private var sidebar: some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 8) {
+                LogoMark().frame(width: 20, height: 20)
+                Text("OpenDisplay").font(.headline).foregroundStyle(.primary)
+                Spacer()
+            }
+            .padding(.top, 32)   // clear the window's traffic-light controls
+            .padding(.horizontal, 14).padding(.bottom, 10)
+            VStack(spacing: 2) {
+                ForEach(PanelTab.allCases) { sidebarRow($0) }
+            }
+            .padding(.horizontal, 8)
+            Spacer(minLength: 0)
+            SidebarFooter()
+        }
+        .frame(width: 188)
+        .background(SidebarBackground().ignoresSafeArea())
+    }
+
+    private func sidebarRow(_ t: PanelTab) -> some View {
+        Button { tab = t } label: {
+            Label(t.rawValue, systemImage: t.icon)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 8).padding(.vertical, 6)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(tab == t ? Color.primary : Color.secondary)
+        .background(tab == t ? Color.primary.opacity(0.12) : .clear,
+                    in: RoundedRectangle(cornerRadius: 7))
+    }
+
+    private var detail: some View {
+        Group {
+            switch tab {
+            case .resolution: ResolutionDetail(model: model)
+            case .brightness: BrightnessDetail(model: model)
+            case .display: DisplayDetail(model: model)
+            case .settings: SettingsDetail(model: model, schedule: model.schedule,
+                                           idle: model.idle, sleep: model.sleepGuard)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .background(.regularMaterial)
+    }
+}
+
+// Native sidebar vibrancy, matching what listStyle(.sidebar) gave before.
+private struct SidebarBackground: NSViewRepresentable {
+    func makeNSView(context: Context) -> NSVisualEffectView {
+        let v = NSVisualEffectView()
+        v.material = .sidebar
+        v.blendingMode = .behindWindow
+        v.state = .active
+        return v
+    }
+    func updateNSView(_ view: NSVisualEffectView, context: Context) {}
 }
 
 private struct SidebarFooter: View {
