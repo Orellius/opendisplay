@@ -41,16 +41,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.addItem(open)
         menu.addItem(.separator())
 
-        let favorites = model.modes.filter { model.isFavorite($0.looksW) }
-        let quick = favorites.isEmpty ? Array(model.modes.prefix(6)) : favorites
-        for mode in quick { menu.addItem(resItem(mode, starred: !favorites.isEmpty)) }
+        if !SkyLight.available {
+            menu.addItem(disabledItem("HiDPI unavailable on this macOS"))
+        } else if model.modes.isEmpty {
+            menu.addItem(disabledItem("No HiDPI scaling on this display"))
+        } else {
+            let favorites = model.modes.filter { model.isFavorite($0.looksW) }
+            let quick = favorites.isEmpty ? Array(model.modes.prefix(6)) : favorites
+            for mode in quick { menu.addItem(resItem(mode, starred: !favorites.isEmpty)) }
 
-        if model.modes.count > quick.count {
-            let all = NSMenuItem(title: "All Resolutions", action: nil, keyEquivalent: "")
-            let sub = NSMenu()
-            for mode in model.modes { sub.addItem(resItem(mode, starred: false)) }
-            all.submenu = sub
-            menu.addItem(all)
+            if model.modes.count > quick.count {
+                let all = NSMenuItem(title: "All Resolutions", action: nil, keyEquivalent: "")
+                let sub = NSMenu()
+                for mode in model.modes { sub.addItem(resItem(mode, starred: false)) }
+                all.submenu = sub
+                menu.addItem(all)
+            }
         }
 
         menu.addItem(.separator())
@@ -66,6 +72,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.addItem(.separator())
         menu.addItem(NSMenuItem(title: "Quit OpenDisplay",
                                 action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
+    }
+
+    private func disabledItem(_ title: String) -> NSMenuItem {
+        let item = NSMenuItem(title: title, action: nil, keyEquivalent: "")
+        item.isEnabled = false
+        return item
     }
 
     private func resItem(_ mode: DisplayMode, starred: Bool) -> NSMenuItem {

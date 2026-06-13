@@ -23,6 +23,8 @@ final class DisplayModel: ObservableObject {
 
     let displayID: CGDirectDisplayID
     let canRotate: Bool
+    let nativeW: Int
+    let nativeH: Int
     private let nativeMode: CGDisplayMode?
     private let virtual = VirtualDisplay()
     private(set) var schedule: NightSchedule!
@@ -32,6 +34,11 @@ final class DisplayModel: ObservableObject {
         self.displayID = displayID
         self.nativeMode = CGDisplayCopyDisplayMode(displayID)
         self.canRotate = Rotation.canRotate(displayID)
+        let opts = [kCGDisplayShowDuplicateLowResolutionModes as String: true] as CFDictionary
+        let native = (CGDisplayCopyAllDisplayModes(displayID, opts) as? [CGDisplayMode])?
+            .filter { $0.pixelWidth == $0.width }.max { $0.pixelWidth < $1.pixelWidth }
+        self.nativeW = native?.width ?? 0
+        self.nativeH = native?.height ?? 0
         refresh()
         let saved = UserDefaults.standard.integer(forKey: Self.key(displayID))
         if saved > 0 { apply(looksW: saved) }

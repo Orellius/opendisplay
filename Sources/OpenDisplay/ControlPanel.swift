@@ -83,35 +83,44 @@ private struct ResolutionDetail: View {
                     Text("SkyLight private API unavailable on this macOS version.")
                         .foregroundStyle(.secondary).padding(.top, 8)
                 } else {
-                    if ascModes.count > 1 {
-                        let i = min(max(0, Int(sliderIdx.rounded())), ascModes.count - 1)
-                        let m = ascModes[i]
-                        VStack(alignment: .leading, spacing: 4) {
-                            HStack {
-                                Text("Scrub resolution").font(.caption).foregroundStyle(.secondary)
-                                Spacer()
-                                Text("\(m.looksW) × \(m.looksH)").font(.caption)
-                                    .monospacedDigit().foregroundStyle(.secondary)
+                    if model.modes.isEmpty {
+                        Text("This display doesn't support HiDPI (\u{201C}Retina\u{201D}) scaling.\nmacOS only exposes HiDPI modes on higher-density panels, around 4K and up.")
+                            .font(.callout).foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .padding(.top, 8).padding(.horizontal, 12)
+                    } else {
+                        if ascModes.count > 1 {
+                            let i = min(max(0, Int(sliderIdx.rounded())), ascModes.count - 1)
+                            let m = ascModes[i]
+                            VStack(alignment: .leading, spacing: 4) {
+                                HStack {
+                                    Text("Scrub resolution").font(.caption).foregroundStyle(.secondary)
+                                    Spacer()
+                                    Text("\(m.looksW) × \(m.looksH)").font(.caption)
+                                        .monospacedDigit().foregroundStyle(.secondary)
+                                }
+                                Slider(value: $sliderIdx, in: 0 ... Double(ascModes.count - 1), step: 1,
+                                       onEditingChanged: { editing in
+                                           if !editing {
+                                               let j = min(max(0, Int(sliderIdx.rounded())), ascModes.count - 1)
+                                               model.apply(looksW: ascModes[j].looksW)
+                                           }
+                                       })
+                                .tint(.orange)
                             }
-                            Slider(value: $sliderIdx, in: 0 ... Double(ascModes.count - 1), step: 1,
-                                   onEditingChanged: { editing in
-                                       if !editing {
-                                           let j = min(max(0, Int(sliderIdx.rounded())), ascModes.count - 1)
-                                           model.apply(looksW: ascModes[j].looksW)
-                                       }
-                                   })
-                            .tint(.orange)
+                            .padding(.horizontal, 12).padding(.vertical, 6)
                         }
-                        .padding(.horizontal, 12).padding(.vertical, 6)
+                        ForEach(model.modes) { mode in
+                            ResRow(mode: mode,
+                                   active: model.currentLooksW == mode.looksW,
+                                   favorite: model.isFavorite(mode.looksW),
+                                   apply: { model.apply(looksW: mode.looksW) },
+                                   toggleFav: { model.toggleFavorite(mode.looksW) })
+                        }
                     }
-                    ForEach(model.modes) { mode in
-                        ResRow(mode: mode,
-                               active: model.currentLooksW == mode.looksW,
-                               favorite: model.isFavorite(mode.looksW),
-                               apply: { model.apply(looksW: mode.looksW) },
-                               toggleFav: { model.toggleFavorite(mode.looksW) })
-                    }
-                    ResRowPlain(title: "Native (no HiDPI)", sub: "2560 × 1440", active: model.currentLooksW == 0) {
+                    ResRowPlain(title: model.modes.isEmpty ? "Standard" : "Native (no HiDPI)",
+                                sub: "\(model.nativeW) × \(model.nativeH)",
+                                active: model.currentLooksW == 0) {
                         model.applyNative()
                     }
                     if !model.refreshRates.isEmpty {
