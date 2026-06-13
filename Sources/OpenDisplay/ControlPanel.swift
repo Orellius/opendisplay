@@ -99,7 +99,7 @@ private struct BrightnessDetail: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
-                PaneTitle("Brightness", sub: "Software dimming, applied live")
+                PaneTitle("Brightness & Color", sub: "Software dimming and warmth, applied live")
                 Card {
                     HStack(spacing: 14) {
                         Image(systemName: "sun.min").foregroundStyle(.secondary)
@@ -109,6 +109,18 @@ private struct BrightnessDetail: View {
                         .tint(.orange)
                         Image(systemName: "sun.max.fill").foregroundStyle(.orange)
                         Text("\(Int(model.brightness))%").font(.system(.body, design: .rounded))
+                            .monospacedDigit().frame(width: 44, alignment: .trailing)
+                    }
+                }
+                Card {
+                    HStack(spacing: 14) {
+                        Image(systemName: "thermometer.snowflake").foregroundStyle(.secondary)
+                        Slider(value: Binding(get: { model.warmth },
+                                              set: { model.setWarmth($0) }),
+                               in: 0 ... 100)
+                        .tint(.orange)
+                        Image(systemName: "thermometer.sun.fill").foregroundStyle(.orange)
+                        Text("\(Int(model.warmth))%").font(.system(.body, design: .rounded))
                             .monospacedDigit().frame(width: 44, alignment: .trailing)
                     }
                 }

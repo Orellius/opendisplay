@@ -10,6 +10,7 @@ final class DisplayModel: ObservableObject {
     @Published private(set) var currentHz: Double = 0
     @Published private(set) var refreshRates: [Double] = []
     @Published var brightness: Double = 100              // software dimming, 0...100
+    @Published var warmth: Double = 0                    // color temperature, 0...100
     @Published var hardwareDDC: Bool = false             // also drive DDC when set
 
     var hardwareAvailable: Bool { Brightness.hardwareAvailable }
@@ -24,19 +25,30 @@ final class DisplayModel: ObservableObject {
         let saved = UserDefaults.standard.integer(forKey: Self.key(displayID))
         if saved > 0 { apply(looksW: saved) }
 
-        let savedB = UserDefaults.standard.object(forKey: Self.brightKey(displayID)) as? Double
-        brightness = savedB ?? 100
-        Brightness.setSoftware(brightness / 100.0, on: displayID)
+        brightness = (UserDefaults.standard.object(forKey: Self.brightKey(displayID)) as? Double) ?? 100
+        warmth = (UserDefaults.standard.object(forKey: Self.warmthKey(displayID)) as? Double) ?? 0
+        applyTone()
     }
 
     private static func key(_ id: CGDirectDisplayID) -> String { "looksW.\(id)" }
     private static func brightKey(_ id: CGDirectDisplayID) -> String { "brightness.\(id)" }
+    private static func warmthKey(_ id: CGDirectDisplayID) -> String { "warmth.\(id)" }
+
+    private func applyTone() {
+        Brightness.apply(brightness: brightness / 100.0, warmth: warmth / 100.0, on: displayID)
+    }
 
     func setBrightness(_ value: Double) {
         brightness = value
-        Brightness.setSoftware(value / 100.0, on: displayID)
+        applyTone()
         if hardwareDDC { Brightness.setHardware(Int(value)) }
         UserDefaults.standard.set(value, forKey: Self.brightKey(displayID))
+    }
+
+    func setWarmth(_ value: Double) {
+        warmth = value
+        applyTone()
+        UserDefaults.standard.set(value, forKey: Self.warmthKey(displayID))
     }
 
     func refresh() {
