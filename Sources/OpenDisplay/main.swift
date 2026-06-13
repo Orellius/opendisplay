@@ -9,12 +9,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem!
     private let model = DisplayModel()
     private var panel: NSWindow?
+    private var hotkeys: Hotkeys?
 
     func applicationDidFinishLaunching(_ note: Notification) {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         statusItem.button?.image = NSImage(systemSymbolName: "sparkles.rectangle.stack",
                                            accessibilityDescription: "OpenDisplay")
         buildMenu()
+        hotkeys = Hotkeys(model: model)
         CGDisplayRegisterReconfigurationCallback(displayReconfig, Unmanaged.passUnretained(self).toOpaque())
     }
 

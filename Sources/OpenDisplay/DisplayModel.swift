@@ -51,6 +51,9 @@ final class DisplayModel: ObservableObject {
         UserDefaults.standard.set(value, forKey: Self.warmthKey(displayID))
     }
 
+    func nudgeBrightness(_ delta: Double) { setBrightness(min(100, max(0, brightness + delta))) }
+    func nudgeWarmth(_ delta: Double) { setWarmth(min(100, max(0, warmth + delta))) }
+
     func refresh() {
         modes = SkyLight.hidpiModes(for: displayID)
         detectCurrent()
