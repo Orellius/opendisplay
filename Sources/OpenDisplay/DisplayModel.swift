@@ -32,6 +32,7 @@ final class DisplayModel: ObservableObject {
     private let virtual = VirtualDisplay()
     private(set) var schedule: NightSchedule!
     let idle = IdleDimmer()
+    let sleepGuard = DisplaySleepGuard()
 
     // Gamma bottoms out at 25% luminance (the floor in Brightness). Below this slider
     // value the overlay ramps in on top of the gamma floor for true deep dimming; at or

@@ -54,7 +54,8 @@ struct ControlPanel: View {
                 case .resolution: ResolutionDetail(model: model)
                 case .brightness: BrightnessDetail(model: model)
                 case .display: DisplayDetail(model: model)
-                case .settings: SettingsDetail(model: model, schedule: model.schedule, idle: model.idle)
+                case .settings: SettingsDetail(model: model, schedule: model.schedule,
+                                               idle: model.idle, sleep: model.sleepGuard)
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)

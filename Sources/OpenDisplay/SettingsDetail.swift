@@ -16,6 +16,7 @@ struct SettingsDetail: View {
     @ObservedObject var model: DisplayModel
     @ObservedObject var schedule: NightSchedule
     @ObservedObject var idle: IdleDimmer
+    @ObservedObject var sleep: DisplaySleepGuard
     @State private var launch = LoginItem.isEnabled
     @State private var virtualW = (UserDefaults.standard.object(forKey: "virtual.w") as? Int) ?? 2560
     private let virtualPresets = [VirtualRes(w: 1920, h: 1080), VirtualRes(w: 2560, h: 1440),
@@ -82,6 +83,16 @@ struct SettingsDetail: View {
                             }
                         }
                     }
+                }
+                Card {
+                    Toggle(isOn: $sleep.enabled) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Prevent display sleep")
+                            Text("Keep the screen awake while OpenDisplay runs")
+                                .font(.caption).foregroundStyle(.secondary)
+                        }
+                    }
+                    .toggleStyle(.switch).tint(.orange)
                 }
                 Card {
                     VStack(alignment: .leading, spacing: 10) {
