@@ -63,6 +63,18 @@ struct ControlPanel: View {
 
 private struct ResolutionDetail: View {
     @ObservedObject var model: DisplayModel
+    @State private var sliderIdx: Double = 0
+
+    private var ascModes: [DisplayMode] { model.modes.sorted { $0.looksW < $1.looksW } }
+
+    private func syncSlider() {
+        if let i = ascModes.firstIndex(where: { $0.looksW == model.currentLooksW }) {
+            sliderIdx = Double(i)
+        } else if !ascModes.isEmpty {
+            sliderIdx = Double(ascModes.count - 1)
+        }
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 6) {
@@ -71,6 +83,27 @@ private struct ResolutionDetail: View {
                     Text("SkyLight private API unavailable on this macOS version.")
                         .foregroundStyle(.secondary).padding(.top, 8)
                 } else {
+                    if ascModes.count > 1 {
+                        let i = min(max(0, Int(sliderIdx.rounded())), ascModes.count - 1)
+                        let m = ascModes[i]
+                        VStack(alignment: .leading, spacing: 4) {
+                            HStack {
+                                Text("Scrub resolution").font(.caption).foregroundStyle(.secondary)
+                                Spacer()
+                                Text("\(m.looksW) × \(m.looksH)").font(.caption)
+                                    .monospacedDigit().foregroundStyle(.secondary)
+                            }
+                            Slider(value: $sliderIdx, in: 0 ... Double(ascModes.count - 1), step: 1,
+                                   onEditingChanged: { editing in
+                                       if !editing {
+                                           let j = min(max(0, Int(sliderIdx.rounded())), ascModes.count - 1)
+                                           model.apply(looksW: ascModes[j].looksW)
+                                       }
+                                   })
+                            .tint(.orange)
+                        }
+                        .padding(.horizontal, 12).padding(.vertical, 6)
+                    }
                     ForEach(model.modes) { mode in
                         ResRow(mode: mode,
                                active: model.currentLooksW == mode.looksW,
@@ -111,6 +144,8 @@ private struct ResolutionDetail: View {
             }
             .padding(20)
         }
+        .onAppear { syncSlider() }
+        .onChange(of: model.currentLooksW) { _, _ in syncSlider() }
     }
 }
 

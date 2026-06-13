@@ -89,10 +89,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     @objc private func quickPick(_ sender: NSMenuItem) {
         guard let looksW = sender.representedObject as? Int else { return }
         model.apply(looksW: looksW)
+        if let mode = model.modes.first(where: { $0.looksW == looksW }) {
+            OSD.resolution(mode.looksW, mode.looksH)
+        }
     }
 
     @objc private func quickNative() {
         model.applyNative()
+        OSD.text("rectangle.on.rectangle.angled", "Native")
     }
 
     @objc private func toggleLogin() {
