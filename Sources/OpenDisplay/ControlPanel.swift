@@ -2,17 +2,21 @@
 // Resolution picks a hidden HiDPI mode; Brightness drives software dimming
 // (and optional DDC); Settings holds launch-at-login and display info.
 
+import AppKit
 import SwiftUI
+import UniformTypeIdentifiers
 
 enum PanelTab: String, CaseIterable, Identifiable {
     case resolution = "Resolution"
     case brightness = "Brightness"
+    case display = "Display"
     case settings = "Settings"
     var id: String { rawValue }
     var icon: String {
         switch self {
         case .resolution: return "rectangle.on.rectangle.angled"
         case .brightness: return "sun.max"
+        case .display: return "display"
         case .settings: return "gearshape"
         }
     }
@@ -44,6 +48,7 @@ struct ControlPanel: View {
                 switch tab ?? .resolution {
                 case .resolution: ResolutionDetail(model: model)
                 case .brightness: BrightnessDetail(model: model)
+                case .display: DisplayDetail(model: model)
                 case .settings: SettingsDetail(model: model)
                 }
             }
@@ -142,6 +147,57 @@ private struct BrightnessDetail: View {
     }
 }
 
+private struct DisplayDetail: View {
+    @ObservedObject var model: DisplayModel
+    @State private var info = DisplayInfo()
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 18) {
+                PaneTitle("Display", sub: info.name)
+                Card {
+                    VStack(alignment: .leading, spacing: 6) {
+                        if let m = info.manufacturerID { InfoRow("Manufacturer", m) }
+                        InfoRow("Vendor / Model", String(format: "0x%04X / 0x%04X", info.vendor, info.model))
+                        if let s = info.alphaSerial { InfoRow("Serial", s) }
+                        if let w = info.weekOfManufacture, let y = info.yearOfManufacture {
+                            InfoRow("Manufactured", "week \(w), \(y)")
+                        }
+                    }
+                }
+                Card {
+                    VStack(alignment: .leading, spacing: 6) {
+                        InfoRow("Native", "\(info.nativeW) × \(info.nativeH)")
+                        InfoRow("Current", "\(info.looksW) × \(info.looksH) · \(Int(info.hz.rounded())) Hz")
+                        if let d = info.diagonalInches { InfoRow("Panel", String(format: "%.1f″", d)) }
+                        if let p = info.ppi { InfoRow("Density", "\(p) PPI") }
+                        if let u = info.edidUUID { InfoRow("EDID UUID", u) }
+                    }
+                }
+                HStack(spacing: 10) {
+                    Button { copyReport() } label: { Label("Copy", systemImage: "doc.on.doc") }
+                    Button { exportReport() } label: { Label("Export…", systemImage: "square.and.arrow.up") }
+                }
+                .buttonStyle(.bordered)
+            }
+            .padding(20)
+        }
+        .onAppear { info = DisplayInfo.gather(model.displayID) }
+    }
+
+    private func copyReport() {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(info.report, forType: .string)
+    }
+
+    private func exportReport() {
+        let panel = NSSavePanel()
+        panel.nameFieldStringValue = "OpenDisplay-\(info.name).txt"
+        panel.allowedContentTypes = [.plainText]
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        try? info.report.write(to: url, atomically: true, encoding: .utf8)
+    }
+}
+
 private struct SettingsDetail: View {
     @ObservedObject var model: DisplayModel
     @State private var launch = LoginItem.isEnabled
@@ -157,11 +213,7 @@ private struct SettingsDetail: View {
                     .toggleStyle(.switch).tint(.orange)
                 }
                 Card {
-                    VStack(alignment: .leading, spacing: 6) {
-                        InfoRow("Display", "LG UltraGear · 27″")
-                        InfoRow("Density", "≈ 109 PPI")
-                        InfoRow("OpenDisplay", "v0.1")
-                    }
+                    InfoRow("OpenDisplay", "v1.0")
                 }
                 Text("HiDPI renders at 2× and downsamples to the panel. Sharper, not denser.")
                     .font(.caption).foregroundStyle(.secondary)
