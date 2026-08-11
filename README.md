@@ -31,6 +31,29 @@ macOS gives an external monitor two controls: a resolution list, and a brightnes
 - The Xcode command line tools: `xcode-select --install`.
 - Full Xcode is optional and buys exactly one thing: Shortcuts. Only the Xcode build emits the const-value metadata that `appintentsmetadataprocessor` needs, so with the command line tools alone `bundle.sh` falls back to SwiftPM and prints a note saying so. Everything works except App Intents discovery, and the CLI and URL scheme still drive Shortcuts.
 
+### Homebrew
+
+```sh
+brew tap orellius/tap
+brew install opendisplay
+```
+
+A formula, not a cask, and it builds from source on your machine. That is the
+point: a locally built bundle is never Gatekeeper-quarantined. The `opendisplay`
+CLI lands on your PATH. Because Homebrew formulae install into the Cellar rather
+than `/Applications`, link the bundle once:
+
+```sh
+ln -sfn "$(brew --prefix)/opt/opendisplay/OpenDisplay.app" /Applications/OpenDisplay.app
+open /Applications/OpenDisplay.app
+```
+
+**The Homebrew build has no Shortcuts actions.** Only the Xcode build emits the
+const-value metadata App Intents needs, and Homebrew's sandbox cannot run
+`xcodebuild` (its dependency resolution shells out to `sandbox-exec`, which does
+not nest). The CLI and the `opendisplay://` URL scheme still drive Shortcuts. For
+App Intents, use the source install below.
+
 ### Build and install
 
 ```sh
@@ -65,7 +88,8 @@ Open the panel and turn on **Start at login**. This registers through `SMAppServ
 ### Update
 
 ```sh
-cd opendisplay && git pull && scripts/install.sh
+brew upgrade opendisplay              # Homebrew install
+cd opendisplay && git pull && scripts/install.sh   # source install
 ```
 
 The script quits the running copy first. Your settings survive: they live in `~/Library/Preferences/com.orellius.opendisplay.plist`, not in the bundle.
@@ -74,8 +98,10 @@ The script quits the running copy first. Your settings survive: they live in `~/
 
 ```sh
 osascript -e 'quit app "OpenDisplay"'
-rm -rf /Applications/OpenDisplay.app
-rm -f /usr/local/bin/opendisplay          # if you symlinked the CLI
+rm -f /Applications/OpenDisplay.app       # the symlink, if you made one
+brew uninstall opendisplay                # Homebrew install
+rm -rf /Applications/OpenDisplay.app      # source install
+rm -f /usr/local/bin/opendisplay          # if you symlinked the CLI by hand
 defaults delete com.orellius.opendisplay  # optional: forget settings
 ```
 
