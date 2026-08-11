@@ -5,6 +5,10 @@
 <p align="center">A display control panel for macOS, in the menu bar.</p>
 <p align="center">Brightness that keeps going after the panel's own floor, plus warmth, contrast, refresh rate, rotation, and the HiDPI modes macOS generates but never lists. No driver, no kernel extension.</p>
 
+<p align="center">
+  <img src="assets/screenshot-resolution.png" width="660" alt="The OpenDisplay control panel, showing the Resolution pane on a 1440p display: one hidden HiDPI mode, the native mode, refresh rates and rotation">
+</p>
+
 ---
 
 macOS gives an external monitor two controls: a resolution list, and a brightness slider only if the panel answers DDC/CI. Everything else is either behind a private API or not exposed at all: the HiDPI modes the system generated and then filtered out of its own list, dimming past the point where the monitor stops, colour warmth, contrast, rotation. OpenDisplay reads the private SkyLight mode enumeration and applies modes through the *public* configuration call. Brightness, warmth and contrast are one live gamma transfer table that it restores on quit. Nothing is installed into the display path, and quitting the app puts the display back.
