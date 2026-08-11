@@ -67,9 +67,10 @@ struct ResolutionDetail: View {
                     }
                     ResRowPlain(title: model.modes.isEmpty ? "Standard" : "Native (no HiDPI)",
                                 sub: "\(model.nativeW) × \(model.nativeH)",
-                                active: model.currentLooksW == 0) {
+                                active: model.currentLooksW == 0 && model.scaledActive == nil) {
                         model.applyNative()
                     }
+                    scaledSection
                     if !model.refreshRates.isEmpty {
                         HStack { Text("Refresh rate").font(.caption).foregroundStyle(.secondary); Spacer() }
                             .padding(.top, 12).padding(.horizontal, 12)
@@ -103,6 +104,36 @@ struct ResolutionDetail: View {
         .onAppear { syncSlider() }
         .onChange(of: model.currentLooksW) { _, _ in syncSlider() }
     }
+
+    // Sizes the panel never advertised, rendered on a mirrored virtual display. Kept
+    // visually separate from the enumerated modes above because the trade is different:
+    // these cost GPU and go through a resample, and every one of them is provisional
+    // until accepted in the countdown box.
+    @ViewBuilder private var scaledSection: some View {
+        if !model.scaledOptions.isEmpty {
+            HStack {
+                Text("Scaled (virtual display)").font(.caption).foregroundStyle(.secondary)
+                Spacer()
+            }
+            .padding(.top, 14).padding(.horizontal, 12)
+            Text("Sizes this panel does not offer. Rendered on a virtual display at 2x and "
+                 + "downsampled onto the panel, so anything above 50% is supersampled. "
+                 + "Costs GPU, and reverts itself in \(ScaledResolution.confirmWindow)s unless you accept it.")
+                .font(.caption).foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.horizontal, 12).padding(.bottom, 4)
+            ResRowPlain(title: "Off", sub: "Use the panel's own modes",
+                        active: model.scaledActive == nil) {
+                model.clearScaled()
+            }
+            ForEach(model.scaledOptions) { opt in
+                ScaledRow(opt: opt,
+                          nativeW: model.nativeW,
+                          active: model.scaledActive?.looksW == opt.looksW,
+                          apply: { model.applyScaled(opt) })
+            }
+        }
+    }
 }
 
 private struct ResRow: View {
@@ -135,6 +166,33 @@ private struct ResRow: View {
             .help(favorite ? "Remove from menu bar" : "Pin to menu bar")
         }
         .padding(.vertical, 8).padding(.horizontal, 12)
+        .background(active ? Color.orange.opacity(0.14) : .clear, in: RoundedRectangle(cornerRadius: 10))
+    }
+}
+
+private struct ScaledRow: View {
+    let opt: ScaledOption; let nativeW: Int; let active: Bool; let apply: () -> Void
+    var body: some View {
+        Button(action: apply) {
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("\(opt.looksW) × \(opt.looksH)").font(.body)
+                    Text("\(opt.percent)% of native · renders \(opt.pxW)×\(opt.pxH)")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                Spacer()
+                if opt.pxW > nativeW {
+                    Text("SS").font(.caption2).fontWeight(.bold)
+                        .padding(.horizontal, 6).padding(.vertical, 2)
+                        .background(.blue.opacity(0.18), in: Capsule())
+                        .foregroundStyle(.blue)
+                        .help("Supersampled: renders more pixels than the panel has")
+                }
+                if active { Image(systemName: "checkmark").foregroundStyle(.orange) }
+            }
+            .padding(.vertical, 8).padding(.horizontal, 12).contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
         .background(active ? Color.orange.opacity(0.14) : .clear, in: RoundedRectangle(cornerRadius: 10))
     }
 }

@@ -8,6 +8,7 @@
 // Public surface: CLI.run(_:) -> Bool (true never returns — it exits; false = launch GUI).
 // NOT responsible for: daemonizing (launchd/SSH own that); persisting rotation (macOS does).
 
+import AppKit   // NSWorkspace, to hand `scaled` to the running agent over the URL scheme
 import CoreGraphics
 import Foundation
 
@@ -21,6 +22,7 @@ enum CLI {
         case "modes": listAllModes(id)
         case "info": print(DisplayInfo.gather(id).report)
         case "res": setRes(id, args)
+        case "scaled": setScaled(id, args)
         case "native": setNative(id)
         case "brightness": setBrightness(id, args)
         case "warmth": setWarmth(id, args)
@@ -76,6 +78,42 @@ enum CLI {
         guard SkyLight.setMode(mode, on: id) else { die("the display refused the \(w) mode") }
         UserDefaults.standard.set(0, forKey: DisplayModel.key(id))
         print("1x \(mode.width)x\(mode.height) (the panel resamples this to its native grid)")
+    }
+
+    // Unlike every other command here, this one cannot do the work itself. A
+    // CGVirtualDisplay is destroyed the moment the process holding it exits, so a
+    // short-lived CLI that built one would leave the panel mirroring a display that no
+    // longer exists. Hand it to the running menubar agent over the URL scheme instead;
+    // LaunchServices starts the agent if it is not up yet.
+    private static func setScaled(_ id: CGDirectDisplayID, _ args: [String]) {
+        let arg = args.count >= 3 ? args[2].lowercased() : "list"
+        if arg == "list" { listScaled(id); return }
+        guard arg == "off" || Int(arg) != nil else {
+            die("usage: opendisplay scaled <looks-like-width> | off | list")
+        }
+        if arg != "off", let w = Int(arg), !scaledOptions(id).contains(where: { $0.looksW == w }) {
+            die("no scaled size at width \(w); see `opendisplay scaled list`")
+        }
+        guard let url = URL(string: "opendisplay://scaled/\(arg)") else { die("bad url") }
+        guard NSWorkspace.shared.open(url) else {
+            die("could not reach the OpenDisplay agent; is the .app installed?")
+        }
+        print(arg == "off" ? "scaling off" : "scaled \(arg) (confirm in the panel within \(ScaledResolution.confirmWindow)s)")
+    }
+
+    private static func scaledOptions(_ id: CGDirectDisplayID) -> [ScaledOption] {
+        let opts = [kCGDisplayShowDuplicateLowResolutionModes as String: true] as CFDictionary
+        let native = (CGDisplayCopyAllDisplayModes(id, opts) as? [CGDisplayMode])?
+            .filter { $0.pixelWidth == $0.width }.max { $0.pixelWidth < $1.pixelWidth }
+        return ScaledResolution.options(nativeW: native?.width ?? 0, nativeH: native?.height ?? 0)
+    }
+
+    private static func listScaled(_ id: CGDirectDisplayID) {
+        let options = scaledOptions(id)
+        guard !options.isEmpty else { print("no scaled sizes available on this display"); return }
+        for o in options {
+            print("  \(o.looksW)x\(o.looksH)  (\(o.percent)% of native, renders \(o.pxW)x\(o.pxH))")
+        }
     }
 
     private static func oneToOneMode(_ id: CGDirectDisplayID, width: Int) -> CGDisplayMode? {
@@ -254,6 +292,7 @@ enum CLI {
           modes                every mode, 1x and 2x, with its render size
           info                 panel identity and geometry
           res <width>          set a HiDPI mode by looks-like width
+          scaled <w>|off|list  size the panel does not have, via a mirrored virtual display
           native               return to the native (non-HiDPI) mode
           brightness <0-100>   software brightness
           warmth <0-100>       color warmth

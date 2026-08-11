@@ -10,6 +10,12 @@
 
 import Foundation
 
+extension Notification.Name {
+    /// Posted for opendisplay://panel. The window belongs to the AppDelegate, not the
+    /// model, so this crosses the gap without handing the model a view reference.
+    static let openControlPanel = Notification.Name("com.orellius.opendisplay.openControlPanel")
+}
+
 enum URLScheme {
     static func handle(_ url: URL, model: DisplayModel) {
         guard url.scheme == "opendisplay" else { return }
@@ -27,7 +33,19 @@ enum URLScheme {
             if let m = model.modes.first(where: { $0.looksW == v }) { OSD.resolution(m.looksW, m.looksH) }
         }
         case "native": model.applyNative(); OSD.text("rectangle.on.rectangle.angled", "Native")
+        // The scaled path deliberately has no fallback: an unlisted width means the panel
+        // cannot render it within the virtual display's limits, and guessing a near one
+        // would change the topology to something the caller never asked for.
+        case "scaled":
+            if raw?.lowercased() == "off" {
+                model.clearScaled()
+                OSD.text("rectangle.on.rectangle.angled", "Scaling off")
+            } else if let v = int,
+                      let opt = model.scaledOptions.first(where: { $0.looksW == v }) {
+                model.applyScaled(opt)
+            }
         case "rotate": if let v = int { model.rotate(to: v) }
+        case "panel": NotificationCenter.default.post(name: .openControlPanel, object: nil)
         case "reset": model.quickReset()
         case "blackout": model.toggleBlackout()
         default: break
