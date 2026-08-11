@@ -1,9 +1,12 @@
 #!/bin/bash
 # Build OpenDisplay and wrap it into a .app bundle (menubar agent, LSUIElement).
-# Builds with xcodebuild rather than `swift build` for one reason: only the Xcode
-# build emits the Swift const-value metadata that appintentsmetadataprocessor needs
-# to produce Metadata.appintents, which is what makes the App Intents show up in
-# Shortcuts.app. The plain SwiftPM build cannot generate that bundle.
+# Prefers xcodebuild for one reason: only the Xcode build emits the Swift const-value
+# metadata that appintentsmetadataprocessor needs to produce Metadata.appintents, which
+# is what makes the App Intents show up in Shortcuts.app. The plain SwiftPM build cannot
+# generate that bundle.
+# With only the Command Line Tools installed there is no xcodebuild, so this falls back
+# to `swift build`. Everything works except Shortcuts discovery; the URL scheme
+# (opendisplay://) still covers scripting, and the CLI covers the rest.
 # Output: ./OpenDisplay.app
 set -euo pipefail
 
@@ -18,13 +21,23 @@ esac
 APP="$ROOT/OpenDisplay.app"
 DD="$ROOT/.build/xcode"
 
-xcodebuild build -scheme OpenDisplay -configuration "$CONFIG" \
-  -derivedDataPath "$DD" -destination 'platform=macOS' >/dev/null
-BIN="$DD/Build/Products/$CONFIG/OpenDisplay"
+if xcrun --find xcodebuild >/dev/null 2>&1 && [ -d "$(xcode-select -p 2>/dev/null)/usr/bin" ] \
+   && xcodebuild -version >/dev/null 2>&1; then
+  xcodebuild build -scheme OpenDisplay -configuration "$CONFIG" \
+    -derivedDataPath "$DD" -destination 'platform=macOS' >/dev/null
+  BIN="$DD/Build/Products/$CONFIG/OpenDisplay"
+else
+  echo "note: no full Xcode; building with SwiftPM, Shortcuts integration skipped"
+  case "$CONFIG" in
+    Release) swift build -c release >/dev/null; BIN="$ROOT/.build/release/OpenDisplay" ;;
+    *)       swift build >/dev/null;            BIN="$ROOT/.build/debug/OpenDisplay" ;;
+  esac
+fi
 
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BIN" "$APP/Contents/MacOS/OpenDisplay"
+cp "$ROOT/assets/AppIcon.icns" "$APP/Contents/Resources/AppIcon.icns"
 
 # Build the App Intents metadata bundle from the const-values Xcode just emitted, so
 # the intents are discoverable in Shortcuts. Best-effort: a missing processor or
@@ -54,6 +67,7 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
   <key>CFBundleName</key><string>OpenDisplay</string>
   <key>CFBundleIdentifier</key><string>com.orellius.opendisplay</string>
   <key>CFBundleExecutable</key><string>OpenDisplay</string>
+  <key>CFBundleIconFile</key><string>AppIcon</string>
   <key>CFBundlePackageType</key><string>APPL</string>
   <key>CFBundleVersion</key><string>1.0</string>
   <key>CFBundleShortVersionString</key><string>1.0</string>
