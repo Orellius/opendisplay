@@ -43,6 +43,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self, selector: #selector(didWake), name: NSWorkspace.didWakeNotification, object: nil)
         NotificationCenter.default.addObserver(
             self, selector: #selector(openPanel), name: .openControlPanel, object: nil)
+        // A saved cursor scale on disk means a previous run died holding the software-cursor
+        // nudge. It is global window server state, so nothing else will put it back.
+        SoftwareCursor.restoreAfterCrash()
         model.restoreVirtualIfNeeded()
         control.start(model: model)
     }
