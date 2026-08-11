@@ -18,6 +18,7 @@ enum CLI {
         let id = CGMainDisplayID()
         switch args[1] {
         case "list": listModes(id)
+        case "modes": listAllModes(id)
         case "info": print(DisplayInfo.gather(id).report)
         case "res": setRes(id, args)
         case "native": setNative(id)
@@ -26,10 +27,19 @@ enum CLI {
         case "contrast": setContrast(id, args)
         case "refresh": setRefresh(id, args)
         case "rotate": setRotate(id, args)
+        case "caps": printCaps()
+        case "vcp": rawVCP(args)
+        case "smoothing": smoothing(args)
+        case "color": color(id, args)
         case "virtual": holdVirtual(args)   // never returns
         case "help", "-h", "--help": printHelp()
         default: return false
         }
+        // Every command above that persists a value writes through UserDefaults, and
+        // exit(0) tears the process down before CFPreferences flushes to cfprefsd. Without
+        // this the write is silently lost: `res` and `native` appear to work on screen and
+        // then the old value comes back on the next launch. Measured 2026-08-11.
+        UserDefaults.standard.synchronize()
         exit(0)
     }
 
@@ -51,9 +61,50 @@ enum CLI {
 
     private static func setRes(_ id: CGDirectDisplayID, _ args: [String]) {
         guard args.count >= 3, let w = Int(args[2]) else { die("usage: opendisplay res <looks-like-width>") }
-        guard SkyLight.applyHiDPI(looksW: w, to: id) else { die("no HiDPI mode at width \(w); see `opendisplay list`") }
-        UserDefaults.standard.set(w, forKey: DisplayModel.key(id))
-        print("HiDPI \(w)")
+        if SkyLight.applyHiDPI(looksW: w, to: id) {
+            UserDefaults.standard.set(w, forKey: DisplayModel.key(id))
+            print("HiDPI \(w)")
+            return
+        }
+        // Most panels expose exactly one HiDPI mode, or none. Falling back to the 1x mode
+        // at the same width means `res 1920` does the obvious thing instead of refusing,
+        // at the cost of the panel scaling it: a width that is not the native one is
+        // resampled by the display, so text is softer than either native or a HiDPI mode.
+        guard let mode = oneToOneMode(id, width: w) else {
+            die("no mode at width \(w), HiDPI or 1x; see `opendisplay list` and `opendisplay modes`")
+        }
+        guard SkyLight.setMode(mode, on: id) else { die("the display refused the \(w) mode") }
+        UserDefaults.standard.set(0, forKey: DisplayModel.key(id))
+        print("1x \(mode.width)x\(mode.height) (the panel resamples this to its native grid)")
+    }
+
+    private static func oneToOneMode(_ id: CGDirectDisplayID, width: Int) -> CGDisplayMode? {
+        let opts = [kCGDisplayShowDuplicateLowResolutionModes as String: true] as CFDictionary
+        guard let modes = CGDisplayCopyAllDisplayModes(id, opts) as? [CGDisplayMode] else { return nil }
+        return modes.filter { $0.width == width && $0.pixelWidth == $0.width }
+            .max { $0.refreshRate < $1.refreshRate }
+    }
+
+    private static func listAllModes(_ id: CGDirectDisplayID) {
+        let opts = [kCGDisplayShowDuplicateLowResolutionModes as String: true] as CFDictionary
+        guard let modes = CGDisplayCopyAllDisplayModes(id, opts) as? [CGDisplayMode] else { print("no modes"); return }
+        let cur = CGDisplayCopyDisplayMode(id)
+        var seen = Set<String>()
+        var rows: [(Int, Int, Int, Int, Double, Bool, Bool)] = []
+        for m in modes {
+            let key = "\(m.width)x\(m.height)@\(m.pixelWidth)"
+            guard !seen.contains(key) else { continue }
+            seen.insert(key)
+            let hz = modes.filter { $0.width == m.width && $0.pixelWidth == m.pixelWidth }.map(\.refreshRate).max() ?? 0
+            let isCur = cur.map { $0.width == m.width && $0.pixelWidth == m.pixelWidth } ?? false
+            rows.append((m.width, m.height, m.pixelWidth, m.pixelHeight, hz, m.pixelWidth > m.width, isCur))
+        }
+        rows.sort { $0.0 == $1.0 ? $0.2 > $1.2 : $0.0 > $1.0 }
+        print("  looks-like     renders         scale  maxHz")
+        for r in rows {
+            print(String(format: "%@ %5d x %-5d  %5d x %-5d  %@   %.0f",
+                         r.6 ? "*" : " ", r.0, r.1, r.2, r.3, r.5 ? "2x" : "1x", r.4))
+        }
     }
 
     private static func setNative(_ id: CGDirectDisplayID) {
@@ -109,6 +160,83 @@ enum CLI {
         print("rotated \(deg)\u{00B0}")
     }
 
+    private static func printCaps() {
+        guard DDC.available else { die("no DDC/CI path to an external display") }
+        guard let caps = DDC.capabilities() else { die("the panel did not answer the capability request (VCP 0xF3)") }
+        print(caps)
+    }
+
+    private static func rawVCP(_ args: [String]) {
+        guard args.count >= 3, let code = UInt8(args[2].replacingOccurrences(of: "0x", with: ""), radix: 16)
+        else { die("usage: opendisplay vcp <hex-code> [value]   e.g. `vcp 87` reads sharpness") }
+        guard DDC.available else { die("no DDC/CI path to an external display") }
+        if args.count >= 4 {
+            guard let v = UInt16(args[3]) else { die("value must be a decimal integer") }
+            guard DDC.write(code, v) else { die(String(format: "write to VCP 0x%02X failed", code)) }
+            print(String(format: "VCP 0x%02X = %d", code, v))
+        } else {
+            guard let r = DDC.read(code) else { die(String(format: "VCP 0x%02X is not readable on this panel", code)) }
+            print(String(format: "VCP 0x%02X = %d (max %d)", code, r.current, r.max))
+        }
+    }
+
+    private static func smoothing(_ args: [String]) {
+        guard args.count >= 3 else {
+            print("font smoothing: \(FontSmoothing.label(FontSmoothing.current))")
+            print("apps pick this up on next launch; the WindowServer needs a logout")
+            return
+        }
+        if args[2] == "auto" {
+            guard FontSmoothing.clear() else { die("could not clear the preference") }
+            print("font smoothing: unset (macOS default)")
+            return
+        }
+        guard let level = Int(args[2]), (0 ... 3).contains(level) else { die("usage: opendisplay smoothing <0-3|auto>   0 is sharpest on a 1x panel") }
+        guard FontSmoothing.set(level) else { die("could not write the preference") }
+        print("font smoothing: \(FontSmoothing.label(level))")
+        print("apps pick this up on next launch; the WindowServer needs a logout")
+    }
+
+    private static func color(_ id: CGDirectDisplayID, _ args: [String]) {
+        let sub = args.count >= 3 ? args[2] : "show"
+        do {
+            switch sub {
+            case "show":
+                let s = ColorProfile.describe(id)
+                print("Profile:        \(s.name ?? "unknown")\(s.isCustom ? " (custom)" : " (macOS EDID default)")")
+                if let u = s.url { print("File:           \(u.path)") }
+                func xy(_ label: String, _ p: (x: Double, y: Double)?) {
+                    guard let p else { return }
+                    print(String(format: "%@x %.4f  y %.4f", label.padding(toLength: 16, withPad: " ", startingAt: 0), p.x, p.y))
+                }
+                xy("White:", s.white)
+                xy("Red:", s.red)
+                xy("Green:", s.green)
+                xy("Blue:", s.blue)
+                if let t = s.trc { print("Tone curve:     \(t)") }
+            case "gamma":
+                guard args.count >= 4, let g = Double(args[3]), (1.0 ... 3.0).contains(g)
+                else { die("usage: opendisplay color gamma <1.0-3.0>   2.2 is the Apple-style response") }
+                let url = try ColorProfile.generate(for: id, gamma: g)
+                try ColorProfile.assign(url, to: id)
+                print("assigned \(url.lastPathComponent)")
+            case "set":
+                guard args.count >= 4 else { die("usage: opendisplay color set <path-to.icc>") }
+                try ColorProfile.assign(URL(fileURLWithPath: args[3]), to: id)
+                print("assigned \(args[3])")
+            case "reset":
+                try ColorProfile.reset(id)
+                print("back to the macOS EDID profile")
+            default:
+                die("usage: opendisplay color [show|gamma <n>|set <path>|reset]")
+            }
+        } catch let ColorProfile.Err.msg(m) {
+            die(m)
+        } catch {
+            die(error.localizedDescription)
+        }
+    }
+
     private static func holdVirtual(_ args: [String]) {
         let w = args.count >= 3 ? (Int(args[2]) ?? 2560) : 2560
         let h = args.count >= 4 ? (Int(args[3]) ?? (w * 9 / 16)) : (w * 9 / 16)
@@ -123,6 +251,7 @@ enum CLI {
         opendisplay - control the display from the command line
 
           list                 hidden HiDPI modes (* = current)
+          modes                every mode, 1x and 2x, with its render size
           info                 panel identity and geometry
           res <width>          set a HiDPI mode by looks-like width
           native               return to the native (non-HiDPI) mode
@@ -131,6 +260,10 @@ enum CLI {
           contrast <0-100>     contrast (50 = neutral)
           refresh <hz>         refresh rate at the current resolution
           rotate <0|90|180|270>  rotate the display
+          caps                 the panel's DDC/CI capability string
+          vcp <hex> [value]    read or write a raw MCCS feature
+          smoothing <0-3|auto> text dilation; 0 is sharpest on a 1x panel
+          color [show|gamma <n>|set <path>|reset]   display ICC profile
           virtual [w] [h]      create a headless HiDPI display and hold it
           help                 this text
         """)

@@ -63,9 +63,22 @@ opendisplay warmth 30           color warmth 0-100
 opendisplay contrast 40         contrast 0-100 (50 = neutral)
 opendisplay refresh 120         refresh rate at the current resolution
 opendisplay rotate 90           rotate the display
+opendisplay smoothing 0         text dilation 0-3 or auto; 0 is sharpest on a 1x panel
+opendisplay color show          the display's ICC profile, primaries and tone curve
+opendisplay caps                the panel's DDC/CI capability string
+opendisplay vcp 87              read a raw MCCS feature (add a value to write it)
 opendisplay virtual 2560        create a headless HiDPI display and hold it
 opendisplay info                panel identity and geometry
 ```
+
+On a non-Retina external panel `smoothing 0` is the single largest sharpness change
+available: macOS has no subpixel antialiasing since 10.14, so it dilates glyph stems
+instead, and at ~110 PPI that dilation is what reads as soft. Apps pick the new value
+up on their next launch; the window server needs a logout.
+
+`caps` and `vcp` are the honest way to find out what a monitor exposes over DDC/CI.
+Panels that ship with DDC/CI off in their on-screen menu answer nothing at all, and
+no software on the Mac can turn it on for them.
 
 Wrap any of these in a Shortcuts "Run Shell Script" action to drive the display from Shortcuts.
 
