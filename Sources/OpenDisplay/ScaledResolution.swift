@@ -43,6 +43,8 @@ final class ScaledResolution {
     private var realID: CGDirectDisplayID = 0
     private var restoreMode: CGDisplayMode?
     private var timer: Timer?
+    private var backstop: DispatchSourceTimer?
+    private var activity: NSObjectProtocol?
 
     private(set) var active: ScaledOption?
     private(set) var awaitingConfirm = false
@@ -132,8 +134,10 @@ final class ScaledResolution {
 
     /// Keep the current scaled mode: cancels the revert countdown.
     func confirm() {
-        timer?.invalidate()
-        timer = nil
+        timer?.invalidate(); timer = nil
+        backstop?.cancel(); backstop = nil
+        if let activity { ProcessInfo.processInfo.endActivity(activity) }
+        activity = nil
         awaitingConfirm = false
     }
 
@@ -148,13 +152,27 @@ final class ScaledResolution {
     /// teardown() is idempotent, so both firing is harmless.
     private func arm() {
         awaitingConfirm = true
-        timer?.invalidate()
-        let backstop = Double(Self.confirmWindow + 3)
-        timer = Timer.scheduledTimer(withTimeInterval: backstop, repeats: false) { [weak self] _ in
-            guard let self else { return }
-            self.teardown(restoringMode: true)
-            self.onAutoRevert?()
+        timer?.invalidate(); timer = nil
+        backstop?.cancel()
+        // App Nap suspends this agent's main run loop seconds after the topology settles,
+        // which stopped both the countdown and this backstop dead and left the mirror up
+        // with nothing left to undo it. Measured 2026-08-11. Two defences: hold an activity
+        // assertion while a change is unconfirmed, and run the timer off a global queue so
+        // it does not depend on the run loop being serviced at all.
+        activity = ProcessInfo.processInfo.beginActivity(
+            options: [.userInitiated, .idleSystemSleepDisabled],
+            reason: "scaled resolution awaiting confirmation")
+        let src = DispatchSource.makeTimerSource(queue: .global(qos: .userInitiated))
+        src.schedule(deadline: .now() + Double(Self.confirmWindow + 3))
+        src.setEventHandler { [weak self] in
+            DispatchQueue.main.async {
+                guard let self else { return }
+                self.teardown(restoringMode: true)
+                self.onAutoRevert?()
+            }
         }
+        src.resume()
+        backstop = src
     }
 
     /// Unmirror first, then release the virtual display. The other order leaves the panel
@@ -163,6 +181,9 @@ final class ScaledResolution {
     private func teardown(restoringMode: Bool) {
         timer?.invalidate()
         timer = nil
+        backstop?.cancel(); backstop = nil
+        if let activity { ProcessInfo.processInfo.endActivity(activity) }
+        activity = nil
         awaitingConfirm = false
         if realID != 0, handle != nil {
             Self.mirror(realID, onto: kCGNullDirectDisplay)
