@@ -137,6 +137,9 @@ opendisplay modes               every mode, 1x and 2x, with its render size
 opendisplay info                panel identity and geometry
 opendisplay res 1920            set a HiDPI mode by looks-like width
 opendisplay native              return to the native (non-HiDPI) mode
+opendisplay scaled list         sizes the panel does not have (see Scaled resolutions)
+opendisplay scaled 3200         apply one; it reverts in 10s unless you accept it
+opendisplay scaled off          back to the panel's own modes
 opendisplay brightness 60       software brightness 0-100
 opendisplay warmth 30           color warmth 0-100
 opendisplay contrast 40         contrast 0-100 (50 = neutral)
@@ -159,8 +162,14 @@ Wrap any of these in a Shortcuts "Run Shell Script" action to drive the display 
 ```
 opendisplay://brightness/50     opendisplay://warmth/30     opendisplay://contrast/40
 opendisplay://res/1920          opendisplay://native        opendisplay://rotate/90
-opendisplay://reset             opendisplay://blackout
+opendisplay://reset             opendisplay://blackout      opendisplay://panel
+opendisplay://scaled/3200       opendisplay://scaled/off
 ```
+
+`scaled` is the one command that cannot do its own work. The virtual display it needs
+dies with the process that owns it, so a short-lived CLI would leave the panel mirroring
+a display that no longer exists. Both the CLI and the URL form hand the request to the
+running menubar agent, which is what holds it open.
 
 ## How it works
 
@@ -193,6 +202,17 @@ The SkyLight symbols are resolved at runtime with `dlsym` and every lookup is op
 
 One consequence: the ramp is display-wide state owned by the window server, not by the app. OpenDisplay restores the identity ramp when it quits, so the failure mode of a crash is "the screen stays dim until you run `opendisplay reset`", never a wrong resolution or a lost display.
 
+## Scaled resolutions
+
+macOS only offers modes your panel declares, plus the hidden HiDPI ones. On a 1440p panel that is exactly one, which is the ceiling described under Measured limits. Scaled resolutions get past it the way BetterDisplay does: OpenDisplay builds a `CGVirtualDisplay` at an arbitrary looks-like size with `hiDPI = 1` so it renders at 2x, then mirrors your real panel onto it. macOS draws the desktop on the oversized virtual framebuffer and the GPU resamples that onto the panel's grid.
+
+On a 2560x1440 panel that turns one available mode into twelve, from looks-1280x720 up to looks-3840x2160 rendered at 7680x4320. Anything above 50% of native renders more pixels than the panel has, so the downsample is true supersampling.
+
+Two things this costs, both real:
+
+- **GPU.** Looks-3840x2160 renders 33 megapixels per frame against your panel's 3.7.
+- **A topology change.** Mirroring can strand your only monitor. Every scaled change is therefore provisional: a "Keep these display settings?" box counts down from 10 seconds and puts the old mode back unless you accept it, the same shape Windows uses. Behind it sit three more exits, in case the box itself never reaches the screen: a 13-second backstop timer, the quick-reset hotkey, and quitting the app. Teardown always unmirrors before releasing the virtual display, because the other order is what leaves a panel mirroring a display that no longer exists.
+
 ## Measured limits
 
 Stated rather than implied. Measured on a Mac Studio driving a 27" LG ULTRAGEAR over DisplayPort, macOS 26.5.1, 2026-08-11.
@@ -204,6 +224,7 @@ Stated rather than implied. Measured on a Mac Studio driving a 27" LG ULTRAGEAR 
 - **Colour-profile assignment does not work here and is not offered.** `ColorSyncDeviceSetCustomProfiles` returns false for this display, and System Settings > Displays > Color Profile is the only path known to work. `ColorSyncDeviceCopyDeviceInfo` answers intermittently on macOS 26 and is not relied on: `opendisplay color show` reads through `CGDisplayCopyColorSpace` instead.
 - **Gamma is display-wide and invisible to screenshots.** Brightness, warmth and contrast cannot be per-app or per-window, and a screen capture records the pre-gamma image. The overlay dim is the opposite: it is a real window, so screen recording does capture it.
 - **`opendisplay virtual` is a topology change.** It creates a `CGVirtualDisplay` and holds it only while the command runs. Mirroring a real panel onto one can strand your only monitor, so do it deliberately.
+- **Scaled resolutions are enumerated but the apply path is UNTESTED.** `opendisplay scaled list` and the ladder it prints are verified on this panel. Actually applying one, the virtual display plus mirror, has not been run here: whether the mirror holds 180 Hz rather than dropping to 60, how sharp the resample looks, and whether macOS 26 settles the topology at all are all unmeasured. The safety net around it (countdown, backstop, unmirror-before-release) is built and compiles; it has not been exercised against a real failure.
 - **One external display on Apple Silicon is what is tested.** The deployment target is macOS 14.0, but 14.x, Intel, internal panels and multi-monitor layouts are untested. Multi-monitor layout, HDR boost, and RGB/YCbCr pixel-encoding control are out of scope by design: on this class of panel they need either a destructive live-screen switch to verify or a private path that is not reliable enough to ship.
 
 ## Credits

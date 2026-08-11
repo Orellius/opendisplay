@@ -25,6 +25,8 @@ final class DisplayModel: ObservableObject {
     }
     @Published private(set) var favorites: Set<Int> = [] // starred looks-like widths
     @Published private(set) var virtualActive = false    // headless virtual display on
+    @Published private(set) var scaledOptions: [ScaledOption] = []
+    @Published private(set) var scaledActive: ScaledOption?   // nil = panel on its own framebuffer
     @Published private(set) var presets: [TonePreset?] = [nil, nil, nil]
     @Published private(set) var displayName = ""          // custom override, "" = use product name
 
@@ -43,6 +45,7 @@ final class DisplayModel: ObservableObject {
     let productName: String
     private let nativeMode: CGDisplayMode?
     private let virtual = VirtualDisplay()
+    private let scaled = ScaledResolution()
     private(set) var schedule: NightSchedule!
     let idle = IdleDimmer()
     let sleepGuard = DisplaySleepGuard()
@@ -65,7 +68,14 @@ final class DisplayModel: ObservableObject {
         self.nativeW = native?.width ?? 0
         self.nativeH = native?.height ?? 0
         self.productName = DisplayInfo.gather(displayID).name
+        self.scaledOptions = ScaledResolution.options(nativeW: nativeW, nativeH: nativeH)
         refresh()
+        scaled.onAutoRevert = { [weak self] in
+            guard let self else { return }
+            self.scaledActive = nil
+            self.detectCurrent()
+            OSD.text("arrow.uturn.backward", "Reverted")
+        }
         let saved = UserDefaults.standard.integer(forKey: Self.key(displayID))
         if saved > 0 { apply(looksW: saved) }
 
@@ -121,6 +131,9 @@ final class DisplayModel: ObservableObject {
     // only on real drift, so re-asserting (which itself fires a reconfig) settles in one pass.
     func reassertIfProtected() {
         guard protectConfig else { return }
+        // Mirroring fires reconfig events of its own. Re-asserting the saved mode into a
+        // live scaled topology would fight it and could tear the mirror down mid-change.
+        guard scaledActive == nil else { return }
         let saved = UserDefaults.standard.integer(forKey: Self.key(displayID))
         detectCurrent()
         guard saved != currentLooksW else { return }
@@ -231,6 +244,10 @@ final class DisplayModel: ObservableObject {
     // BetterDisplay #1208: panic key back to a known-good state when a scaled-res
     // experiment leaves the screen unusable.
     func quickReset() {
+        // The panic key exists for exactly this: a scaled experiment that left the screen
+        // unusable. Drop the mirror before anything else, since nothing else is visible
+        // until the panel is back on its own framebuffer.
+        clearScaled()
         applyNative()
         setBrightness(100)
         setWarmth(0)
@@ -283,6 +300,45 @@ final class DisplayModel: ObservableObject {
         UserDefaults.standard.set(0, forKey: Self.key(displayID))
         detectCurrent()
     }
+
+    // Resolutions the panel never advertised, via a mirrored virtual display. Provisional
+    // until the user accepts: ConfirmRevert counts down and puts the old mode back if the
+    // change left nothing readable on screen. See ScaledResolution for the mechanism.
+    func applyScaled(_ option: ScaledOption) {
+        scaled.apply(option, to: displayID) { [weak self] ok in
+            guard let self else { return }
+            guard ok else {
+                self.scaledActive = nil
+                OSD.text("exclamationmark.triangle", "Scaling failed")
+                return
+            }
+            self.scaledActive = option
+            ConfirmRevert.shared.ask(
+                headline: "Keep these display settings?",
+                detail: "\(option.looksW) × \(option.looksH) at \(option.percent)% of native, "
+                    + "rendered \(option.pxW) × \(option.pxH).",
+                seconds: ScaledResolution.confirmWindow,
+                onKeep: { [weak self] in self?.keepScaled(option) },
+                onRevert: { [weak self] in self?.clearScaled() })
+        }
+    }
+
+    private func keepScaled(_ option: ScaledOption) {
+        scaled.confirm()
+        UserDefaults.standard.set(option.looksW, forKey: Self.scaledKey(displayID))
+        detectCurrent()
+        OSD.resolution(option.looksW, option.looksH)
+    }
+
+    func clearScaled() {
+        ConfirmRevert.shared.dismiss()
+        scaled.revert()
+        scaledActive = nil
+        UserDefaults.standard.set(0, forKey: Self.scaledKey(displayID))
+        detectCurrent()
+    }
+
+    static func scaledKey(_ id: CGDirectDisplayID) -> String { "scaledW.\(id)" }
 
     func setRefresh(_ hz: Double) {
         if currentLooksW > 0 {

@@ -7,23 +7,41 @@
 import Cocoa
 import SwiftUI
 
-final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem!
     private let model = DisplayModel()
     private var panel: NSWindow?
     private var hotkeys: Hotkeys?
+    private let popover = NSPopover()
 
     func applicationDidFinishLaunching(_ note: Notification) {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         statusItem.button?.image = NSImage(systemSymbolName: "sparkles.rectangle.stack",
                                            accessibilityDescription: "OpenDisplay")
-        let menu = NSMenu()
-        menu.delegate = self
-        statusItem.menu = menu
+        statusItem.button?.target = self
+        statusItem.button?.action = #selector(statusClicked)
+        statusItem.button?.sendAction(on: [.leftMouseUp, .rightMouseUp])
+
+        let dropdown = MenuPanel(model: model,
+                                 onOpenPanel: { [weak self] in
+                                     self?.popover.performClose(nil)
+                                     self?.openPanel()
+                                 },
+                                 onQuit: { NSApp.terminate(nil) })
+        let host = NSHostingController(rootView: dropdown)
+        // Without this the popover keeps whatever size the controller reported when it was
+        // built, which is before the model has modes or scaled options, so the panel grows
+        // past its own frame and the top section is clipped away.
+        host.sizingOptions = [.preferredContentSize]
+        popover.contentViewController = host
+        popover.behavior = .transient
+        popover.animates = false
         hotkeys = Hotkeys(model: model)
         CGDisplayRegisterReconfigurationCallback(displayReconfig, Unmanaged.passUnretained(self).toOpaque())
         NSWorkspace.shared.notificationCenter.addObserver(
             self, selector: #selector(didWake), name: NSWorkspace.didWakeNotification, object: nil)
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(openPanel), name: .openControlPanel, object: nil)
         model.restoreVirtualIfNeeded()
     }
 
@@ -38,41 +56,38 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     func applicationWillTerminate(_ note: Notification) {
         Brightness.restore()   // don't leave the panel dimmed after quit
+        // The virtual display dies with this process. Unmirror first, or the panel is
+        // left mirroring a display that no longer exists and the screen goes with it.
+        model.clearScaled()
     }
 
-    // Rebuilt each time the menu opens so favorites and the active mode stay current.
-    func menuNeedsUpdate(_ menu: NSMenu) {
-        menu.removeAllItems()
-        menu.addItem(disabledItem(model.effectiveName))
-        menu.addItem(.separator())
-        let open = NSMenuItem(title: "Open OpenDisplay…", action: #selector(openPanel), keyEquivalent: "o")
+    @objc private func statusClicked() {
+        if NSApp.currentEvent?.type == .rightMouseUp { showMenu() } else { togglePopover() }
+    }
+
+    private func togglePopover() {
+        guard let button = statusItem.button else { return }
+        if popover.isShown { popover.performClose(nil); return }
+        model.refresh()   // favorites and the active mode go stale between openings
+        popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+        // A transient popover from a status item does not take key focus on its own,
+        // which leaves the brightness slider needing two clicks: one to focus, one to drag.
+        popover.contentViewController?.view.window?.makeKey()
+    }
+
+    // Right-click keeps a real menu, for the few things that are faster as one line.
+    private func showMenu() {
+        let menu = NSMenu()
+        let open = NSMenuItem(title: "Open Control Panel", action: #selector(openPanel), keyEquivalent: "o")
         open.target = self
         menu.addItem(open)
-        menu.addItem(.separator())
-
-        if !SkyLight.available {
-            menu.addItem(disabledItem("HiDPI unavailable on this macOS"))
-        } else if model.modes.isEmpty {
-            menu.addItem(disabledItem("No HiDPI scaling on this display"))
-        } else {
-            let favorites = model.modes.filter { model.isFavorite($0.looksW) }
-            let quick = favorites.isEmpty ? Array(model.modes.prefix(6)) : favorites
-            for mode in quick { menu.addItem(resItem(mode, starred: !favorites.isEmpty)) }
-
-            if model.modes.count > quick.count {
-                let all = NSMenuItem(title: "All Resolutions", action: nil, keyEquivalent: "")
-                let sub = NSMenu()
-                for mode in model.modes { sub.addItem(resItem(mode, starred: false)) }
-                all.submenu = sub
-                menu.addItem(all)
-            }
-        }
-
-        menu.addItem(.separator())
         let native = NSMenuItem(title: "Native", action: #selector(quickNative), keyEquivalent: "")
         native.target = self
-        native.state = model.currentLooksW == 0 ? .on : .off
+        native.state = model.currentLooksW == 0 && model.scaledActive == nil ? .on : .off
         menu.addItem(native)
+        let reset = NSMenuItem(title: "Reset Display", action: #selector(quickResetAction), keyEquivalent: "")
+        reset.target = self
+        menu.addItem(reset)
         menu.addItem(.separator())
         let login = NSMenuItem(title: "Start at Login", action: #selector(toggleLogin), keyEquivalent: "")
         login.target = self
@@ -81,23 +96,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.addItem(.separator())
         menu.addItem(NSMenuItem(title: "Quit OpenDisplay",
                                 action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
+        statusItem.menu = menu
+        statusItem.button?.performClick(nil)
+        statusItem.menu = nil
     }
 
-    private func disabledItem(_ title: String) -> NSMenuItem {
-        let item = NSMenuItem(title: title, action: nil, keyEquivalent: "")
-        item.isEnabled = false
-        return item
-    }
-
-    private func resItem(_ mode: DisplayMode, starred: Bool) -> NSMenuItem {
-        let item = NSMenuItem(title: "\(mode.looksW) × \(mode.looksH)  HiDPI",
-                              action: #selector(quickPick(_:)), keyEquivalent: "")
-        if starred { item.image = NSImage(systemSymbolName: "star.fill", accessibilityDescription: nil) }
-        item.representedObject = mode.looksW
-        item.state = model.currentLooksW == mode.looksW ? .on : .off
-        item.target = self
-        return item
-    }
+    @objc private func quickResetAction() { model.quickReset() }
 
     @objc private func openPanel() {
         if panel == nil {
@@ -113,14 +117,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
         NSApp.activate(ignoringOtherApps: true)
         panel?.makeKeyAndOrderFront(nil)
-    }
-
-    @objc private func quickPick(_ sender: NSMenuItem) {
-        guard let looksW = sender.representedObject as? Int else { return }
-        model.apply(looksW: looksW)
-        if let mode = model.modes.first(where: { $0.looksW == looksW }) {
-            OSD.resolution(mode.looksW, mode.looksH)
-        }
     }
 
     @objc private func quickNative() {

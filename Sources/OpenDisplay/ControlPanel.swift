@@ -37,7 +37,12 @@ struct ControlPanel: View {
             Divider()
             detail
         }
-        .frame(width: 660, height: 470)
+        // topLeading, not the default center: if the hosting view is ever a hair narrower
+        // than this frame (fullSizeContentView makes the content view taller than the
+        // contentRect, and a centered fixed frame then overhangs both edges), centering
+        // pushes the sidebar off the left edge and its rows get clipped. Anchoring the
+        // layout means any mismatch shows up as space on the right instead.
+        .frame(width: 660, height: 470, alignment: .topLeading)
     }
 
     private var sidebar: some View {
@@ -57,6 +62,10 @@ struct ControlPanel: View {
             SidebarFooter()
         }
         .frame(width: 188)
+        // ignoresSafeArea on the BACKGROUND only: fullSizeContentView puts a titlebar-high
+        // safe area at the top, and without this the material stops below it and leaves a
+        // bare strip behind the traffic lights. The content keeps its safe area, which is
+        // what the header's .padding(.top, 32) is clearing.
         .background(SidebarBackground().ignoresSafeArea())
     }
 
@@ -88,12 +97,16 @@ struct ControlPanel: View {
     }
 }
 
-// Native sidebar vibrancy, matching what listStyle(.sidebar) gave before.
+// Native sidebar vibrancy. blendingMode is withinWindow, NOT behindWindow: behindWindow
+// samples the desktop under the window, so on a gradient wallpaper the sidebar renders as
+// a stretched colour wash that slides around as the window moves, and it never matches the
+// detail pane's .regularMaterial beside it. withinWindow blends against the window's own
+// backing instead, which is flat and stable wherever the window sits.
 private struct SidebarBackground: NSViewRepresentable {
     func makeNSView(context: Context) -> NSVisualEffectView {
         let v = NSVisualEffectView()
         v.material = .sidebar
-        v.blendingMode = .behindWindow
+        v.blendingMode = .withinWindow
         v.state = .active
         return v
     }
