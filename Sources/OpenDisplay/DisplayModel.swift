@@ -265,7 +265,13 @@ final class DisplayModel: ObservableObject {
     }
 
     func refresh() {
-        modes = SkyLight.hidpiModes(for: displayID)
+        // While the panel is a mirror slave its mode list describes the master's
+        // framebuffer, not the panel: a scaled mode makes this 1440p display report HiDPI
+        // modes it does not have, and they vanish when the mirror does. Keep the last list
+        // enumerated off-mirror rather than swapping in modes that cannot be applied.
+        if !PhysicalDisplay.isMirrorSlave(displayID) {
+            modes = SkyLight.hidpiModes(for: displayID)
+        }
         detectCurrent()
     }
 

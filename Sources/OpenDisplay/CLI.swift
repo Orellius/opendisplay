@@ -53,6 +53,14 @@ enum CLI {
     }
 
     private static func listModes(_ id: CGDirectDisplayID) {
+        // A separate process has no memory of the pre-mirror list, so the honest move is
+        // to label what is being printed rather than pass the mirror's framebuffer off as
+        // the panel's own modes. The GUI keeps the real list instead (DisplayModel).
+        let masked = PhysicalDisplay.isMirrorSlave(id)
+        if masked {
+            print("note: a scaled mode is active, so these are the mirrored framebuffer's")
+            print("      modes, not the panel's. Run `opendisplay scaled off` for its own.")
+        }
         let modes = SkyLight.hidpiModes(for: id)
         guard !modes.isEmpty else { print("no hidden HiDPI modes on this display"); return }
         let cur = CGDisplayCopyDisplayMode(id)

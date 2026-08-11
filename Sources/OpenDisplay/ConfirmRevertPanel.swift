@@ -27,7 +27,7 @@ final class ConfirmRevert {
     static let shared = ConfirmRevert()
 
     private var panel: NSPanel?
-    private var ticker: Timer?
+    private var ticker: DispatchSourceTimer?
     private var onKeep: (() -> Void)?
     private var onRevert: (() -> Void)?
     private let state = CountdownState()
@@ -79,15 +79,26 @@ final class ConfirmRevert {
         NSApp.activate(ignoringOtherApps: true)
         win.makeKeyAndOrderFront(nil)
 
-        ticker = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
-            guard let self else { return }
-            self.state.remaining -= 1
-            if self.state.remaining <= 0 { self.finish(keep: false) }
+        // Off a global queue, and counting against a wall-clock deadline rather than
+        // decrementing: a run loop that stops being serviced must not be able to stall the
+        // countdown, and a throttled tick must still land on the right number.
+        let deadline = Date().addingTimeInterval(Double(seconds))
+        let src = DispatchSource.makeTimerSource(queue: .global(qos: .userInitiated))
+        src.schedule(deadline: .now() + 1, repeating: 1)
+        src.setEventHandler { [weak self] in
+            let left = Int(deadline.timeIntervalSinceNow.rounded())
+            DispatchQueue.main.async {
+                guard let self else { return }
+                self.state.remaining = max(0, left)
+                if left <= 0 { self.finish(keep: false) }
+            }
         }
+        src.resume()
+        ticker = src
     }
 
     func dismiss() {
-        ticker?.invalidate()
+        ticker?.cancel()
         ticker = nil
         NotificationCenter.default.removeObserver(
             self, name: NSApplication.didChangeScreenParametersNotification, object: nil)

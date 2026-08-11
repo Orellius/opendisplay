@@ -27,6 +27,15 @@ enum PhysicalDisplay {
         CGDisplayVendorNumber(id) == DisplayMarker.vendorID
     }
 
+    /// True when this display is a mirror slave, i.e. it is showing another display's
+    /// framebuffer. Its enumerated mode list then describes that framebuffer rather than
+    /// the panel: with a scaled mode on, this 1440p panel starts reporting HiDPI modes up
+    /// to 2560x1440-rendered-at-5120x2880, none of which exist once the mirror is gone.
+    /// Anything presenting a mode list has to say so rather than print the fiction.
+    static func isMirrorSlave(_ id: CGDirectDisplayID) -> Bool {
+        CGDisplayMirrorsDisplay(id) != kCGNullDirectDisplay
+    }
+
     /// The real panel the user means. Prefers the main display when it is real hardware,
     /// otherwise the first online display this app did not create. Falls back to
     /// CGMainDisplayID() so a machine whose only display is somehow synthetic still gets
