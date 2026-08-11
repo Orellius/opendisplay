@@ -13,6 +13,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var panel: NSWindow?
     private var hotkeys: Hotkeys?
     private let popover = NSPopover()
+    private let control = ControlSocket()
 
     func applicationDidFinishLaunching(_ note: Notification) {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
@@ -43,6 +44,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NotificationCenter.default.addObserver(
             self, selector: #selector(openPanel), name: .openControlPanel, object: nil)
         model.restoreVirtualIfNeeded()
+        control.start(model: model)
     }
 
     func application(_ application: NSApplication, open urls: [URL]) {
@@ -55,6 +57,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationWillTerminate(_ note: Notification) {
+        control.stop()         // leaving the socket file behind would advertise a dead app
         Brightness.restore()   // don't leave the panel dimmed after quit
         // The virtual display dies with this process. Unmirror first, or the panel is
         // left mirroring a display that no longer exists and the screen goes with it.

@@ -24,6 +24,7 @@ macOS gives an external monitor two controls: a resolution list, and a brightnes
 - **Resolution protection**, which refuses to let an app or macOS change the mode out from under you, and a keep-awake that stops the display sleeping while OpenDisplay runs.
 - **A Display pane** that reads panel identity and geometry: name, serial, PPI, EDID UUID, with copy and export.
 - **An `opendisplay` command line, an `opendisplay://` URL scheme, and App Intents for Shortcuts.** The app binary *is* the CLI.
+- **A [control socket](#control-socket)** for anything that needs to read the display state or watch it change, rather than fire a command and exit.
 - Start at login, favourite resolutions pinned to the menu bar, a custom display name, settings export and import as JSON.
 - No dependency, no driver, no kernel extension, no login daemon unless you ask for one.
 
@@ -170,6 +171,54 @@ opendisplay://scaled/3200       opendisplay://scaled/off
 dies with the process that owns it, so a short-lived CLI would leave the panel mirroring
 a display that no longer exists. Both the CLI and the URL form hand the request to the
 running menubar agent, which is what holds it open.
+
+## Control socket
+
+The CLI and the URL scheme are both fire-and-forget: they apply a change and exit. Neither
+can answer *what is the display doing right now*, or tell you when something changed
+underneath you. For that the running agent listens on a UNIX domain socket:
+
+```
+~/Library/Application Support/com.orellius.opendisplay/control.sock
+```
+
+It speaks line-delimited JSON, one request object per line and one reply per line:
+
+```sh
+printf '{"cmd":"state"}\n' | python3 -c 'import socket,sys,os
+s=socket.socket(socket.AF_UNIX); s.connect(os.path.expanduser(
+  "~/Library/Application Support/com.orellius.opendisplay/control.sock"))
+s.sendall(sys.stdin.buffer.read()); print(s.makefile("rb").readline().decode())'
+```
+
+| Command | Effect |
+| --- | --- |
+| `{"cmd":"state"}` | the full display state: identity, native size, current mode, available modes and refresh rates, rotation, tone |
+| `{"cmd":"brightness","pct":60}` | software brightness, 0-100. Same for `warmth` and `contrast` |
+| `{"cmd":"res","looksW":1920}` | set a HiDPI mode by looks-like width |
+| `{"cmd":"native"}` / `{"cmd":"reset"}` | native mode / quick-reset |
+| `{"cmd":"subscribe"}` | keep the connection open and receive `{"event":"state",...}` on every change |
+
+Notes on the shape of it, so a client can be written against facts rather than guesses:
+
+- **It is the same code path as the UI.** Every command routes through the one display
+  model on the main queue, so a socket client and the menubar cannot disagree.
+- **Unknown commands are refused, not ignored.** So is a `res` width the panel does not
+  have; the error carries the list of widths that exist. A caller learns immediately
+  instead of silently getting a resolution it never asked for.
+- **Pushes are coalesced.** A slider drag emits a burst of changes; subscribers get one
+  push with the settled value, measured at 1 push for a 5-write burst.
+- **The tone values are this app's own gamma state**, and say so: each carries
+  `"source":"app-local"`. Many panels answer no DDC reads at all, so a "hardware" number
+  would be last-written-by-us at best.
+- **`scaled` is deliberately absent.** It rewrites display topology and its confirm
+  countdown has a known defect on the non-GUI path, so it stays off a machine-driven
+  interface until that is fixed.
+- **Reach is the filesystem, not the network.** UNIX domain, never TCP: the directory is
+  `0700` and the socket `0600`, so it is your own processes or nothing.
+- **Absence and death are distinguishable.** The socket is unlinked on quit, so no file
+  means no agent. After a `SIGKILL` the file survives and a connect gets `ECONNREFUSED`;
+  the next launch unlinks and rebinds over it, measured at 0.3s.
 
 ## How it works
 
