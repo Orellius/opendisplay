@@ -37,6 +37,7 @@ fi
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BIN" "$APP/Contents/MacOS/OpenDisplay"
+cp "$ROOT/assets/AppIcon.icns" "$APP/Contents/Resources/AppIcon.icns"
 
 # Build the App Intents metadata bundle from the const-values Xcode just emitted, so
 # the intents are discoverable in Shortcuts. Best-effort: a missing processor or
@@ -66,6 +67,7 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
   <key>CFBundleName</key><string>OpenDisplay</string>
   <key>CFBundleIdentifier</key><string>com.orellius.opendisplay</string>
   <key>CFBundleExecutable</key><string>OpenDisplay</string>
+  <key>CFBundleIconFile</key><string>AppIcon</string>
   <key>CFBundlePackageType</key><string>APPL</string>
   <key>CFBundleVersion</key><string>1.0</string>
   <key>CFBundleShortVersionString</key><string>1.0</string>

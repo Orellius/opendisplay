@@ -17,6 +17,13 @@ scripts/install.sh          # build and install to /Applications
 
 Requires macOS 14+ on Apple Silicon and the Xcode command line tools.
 
+The app icon is committed as `assets/AppIcon.icns`. It is drawn in code, so regenerate it
+only when the mark itself changes:
+
+```sh
+swift scripts/make-icon.swift   # rewrites assets/AppIcon.icns
+```
+
 ## Pull requests
 
 - Keep changes focused: one concern per PR.
