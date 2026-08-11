@@ -21,7 +21,18 @@ esac
 APP="$ROOT/OpenDisplay.app"
 DD="$ROOT/.build/xcode"
 
-if xcrun --find xcodebuild >/dev/null 2>&1 && [ -d "$(xcode-select -p 2>/dev/null)/usr/bin" ] \
+# OPENDISPLAY_IN_SANDBOX=1 says "an outer sandbox already owns this process": take the
+# SwiftPM path even if Xcode is present, and tell SwiftPM not to sandbox either. Both
+# xcodebuild's dependency resolution and SwiftPM's manifest compile shell out to
+# sandbox-exec, and neither can nest inside Homebrew's sandbox: both die on
+# "sandbox-exec: sandbox_apply: Operation not permitted". Measured 2026-08-11 building
+# the Homebrew formula. Costs Shortcuts discovery, because only the Xcode build emits
+# the const-value metadata App Intents needs.
+SWIFT_SANDBOX_FLAG=""
+[ -n "${OPENDISPLAY_IN_SANDBOX:-}" ] && SWIFT_SANDBOX_FLAG="--disable-sandbox"
+
+if [ -z "${OPENDISPLAY_IN_SANDBOX:-}" ] \
+   && xcrun --find xcodebuild >/dev/null 2>&1 && [ -d "$(xcode-select -p 2>/dev/null)/usr/bin" ] \
    && xcodebuild -version >/dev/null 2>&1; then
   xcodebuild build -scheme OpenDisplay -configuration "$CONFIG" \
     -derivedDataPath "$DD" -destination 'platform=macOS' >/dev/null
@@ -29,8 +40,8 @@ if xcrun --find xcodebuild >/dev/null 2>&1 && [ -d "$(xcode-select -p 2>/dev/nul
 else
   echo "note: no full Xcode; building with SwiftPM, Shortcuts integration skipped"
   case "$CONFIG" in
-    Release) swift build -c release >/dev/null; BIN="$ROOT/.build/release/OpenDisplay" ;;
-    *)       swift build >/dev/null;            BIN="$ROOT/.build/debug/OpenDisplay" ;;
+    Release) swift build -c release $SWIFT_SANDBOX_FLAG >/dev/null; BIN="$ROOT/.build/release/OpenDisplay" ;;
+    *)       swift build $SWIFT_SANDBOX_FLAG >/dev/null;            BIN="$ROOT/.build/debug/OpenDisplay" ;;
   esac
 fi
 
