@@ -58,7 +58,7 @@ final class DisplayModel: ObservableObject {
     private static let deepDimFloor = 20.0
     private static let deepDimMaxAlpha = 0.88
 
-    init(displayID: CGDirectDisplayID = CGMainDisplayID()) {
+    init(displayID: CGDirectDisplayID = PhysicalDisplay.main()) {
         self.displayID = displayID
         self.nativeMode = CGDisplayCopyDisplayMode(displayID)
         self.canRotate = Rotation.canRotate(displayID)

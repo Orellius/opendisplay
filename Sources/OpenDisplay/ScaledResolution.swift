@@ -102,7 +102,7 @@ final class ScaledResolution {
         // Match the real panel's physical size so macOS derives a sane DPI for the mirror.
         let mm = CGDisplayScreenSize(real)
         desc.sizeInMillimeters = (mm.width > 0 && mm.height > 0) ? mm : CGSize(width: 600, height: 340)
-        desc.vendorID = 0x4F50      // 'OP'
+        desc.vendorID = DisplayMarker.vendorID   // tags this as ours, see PhysicalDisplay
         desc.productID = 0x5CA1
         desc.serialNum = 0x0002     // distinct from the headless display's, so the two coexist
 

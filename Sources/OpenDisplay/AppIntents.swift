@@ -12,7 +12,7 @@ import AppIntents
 import CoreGraphics
 import Foundation
 
-private func mainID() -> CGDirectDisplayID { CGMainDisplayID() }
+private func mainID() -> CGDirectDisplayID { PhysicalDisplay.main() }
 
 struct SetBrightnessIntent: AppIntent {
     static var title: LocalizedStringResource = "Set Display Brightness"

@@ -16,7 +16,9 @@ enum CLI {
     static func run(_ args: [String]) -> Bool {
         guard args.count >= 2 else { return false }
         setvbuf(stdout, nil, _IOLBF, 0)   // line-buffer so `virtual` confirms before it blocks
-        let id = CGMainDisplayID()
+        // Never CGMainDisplayID(): while a scaled mode is on, that is this app's own
+        // virtual display and every command would describe or drive the wrong screen.
+        let id = PhysicalDisplay.main()
         switch args[1] {
         case "list": listModes(id)
         case "modes": listAllModes(id)
