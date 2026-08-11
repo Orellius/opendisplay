@@ -26,7 +26,7 @@ final class VirtualDisplay {
         desc.maxPixelsWide = 7680
         desc.maxPixelsHigh = 4320
         desc.sizeInMillimeters = CGSize(width: 600, height: 340)
-        desc.vendorID = 0x4F50      // 'OP'
+        desc.vendorID = DisplayMarker.vendorID   // tags this as ours, see PhysicalDisplay
         desc.productID = 0x0D15
         desc.serialNum = 0x0001
         let display = CGVirtualDisplay(descriptor: desc)
