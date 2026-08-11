@@ -127,6 +127,9 @@ final class ScaledResolution {
                 return
             }
             self.active = option
+            // The panel is a mirror slave now, so the GPU cursor plane no longer reaches it
+            // and the pointer vanishes, games worst of all. Put it on the software path.
+            SoftwareCursor.force()
             self.arm()
             onResult(true)
         }
@@ -185,6 +188,7 @@ final class ScaledResolution {
         if let activity { ProcessInfo.processInfo.endActivity(activity) }
         activity = nil
         awaitingConfirm = false
+        SoftwareCursor.restore()   // the panel drives its own pipe again, hardware cursor is fine
         if realID != 0, handle != nil {
             Self.mirror(realID, onto: kCGNullDirectDisplay)
         }
